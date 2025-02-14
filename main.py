@@ -71,7 +71,7 @@ def main(config, args):
         torch.seed()
 
     print(f"Initial seed: {torch.initial_seed()}")
-    print(args.inference_steps,"steps")
+
     pipeline(
         video_path=args.video_path,
         audio_path=args.audio_path,
@@ -86,18 +86,40 @@ def main(config, args):
     )
 
 
+'''
+ #!/bin/bash
+
+python -m scripts.inference \
+    --unet_config_path "configs/unet/second_stage.yaml" \
+    --inference_ckpt_path "checkpoints/latentsync_unet.pt" \
+    --inference_steps 20 \
+    --guidance_scale 1.5 \
+    --video_path "assets/demo1_video.mp4" \
+    --audio_path "assets/demo1_audio.wav" \
+    --video_out_path "video_out.mp4"
+
+'''
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--unet_config_path", type=str, default="configs/unet.yaml")
-    parser.add_argument("--inference_ckpt_path", type=str, required=True)
-    parser.add_argument("--video_path", type=str, required=True)
-    parser.add_argument("--audio_path", type=str, required=True)
-    parser.add_argument("--video_out_path", type=str, required=True)
-    parser.add_argument("--inference_steps", type=int, default=20)
-    parser.add_argument("--guidance_scale", type=float, default=1.0)
-    parser.add_argument("--seed", type=int, default=1247)
+    # parser.add_argument("--unet_config_path", type=str, default="configs/unet.yaml")
+    # parser.add_argument("--inference_ckpt_path", type=str, required=True)
+    # parser.add_argument("--video_path", type=str, required=True)
+    # parser.add_argument("--audio_path", type=str, required=True)
+    # parser.add_argument("--video_out_path", type=str, required=True)
+    # parser.add_argument("--inference_steps", type=int, default=20)
+    # parser.add_argument("--guidance_scale", type=float, default=1.0)
+    # parser.add_argument("--seed", type=int, default=1247)
     args = parser.parse_args()
 
+    args.unet_config_path = "configs/unet/second_stage.yaml"
+    args.inference_ckpt_path = "checkpoints/latentsync_unet.pt"
+    args.video_path = "assets/demo1_video.mp4"
+    args.audio_path = "assets/demo1_audio.wav"
+    args.video_out_path = "video_out.mp4"
+    args.inference_steps = 20
+    args.guidance_scale = 1.5
+    args.seed = 100
     config = OmegaConf.load(args.unet_config_path)
 
     main(config, args)
+

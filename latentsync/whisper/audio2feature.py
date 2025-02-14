@@ -1,6 +1,7 @@
 # Adapted from https://github.com/TMElyralab/MuseTalk/blob/main/musetalk/whisper/audio2feature.py
-
-from .whisper import load_model
+import sys
+sys.path.insert(0,"/home/qc/ai_server/ai_server/LatentSync")
+from latentsync.whisper.whisper import load_model
 import numpy as np
 import torch
 import os

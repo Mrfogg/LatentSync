@@ -11,10 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import sys
+sys.path.insert(0,"/home/qc/ai_server/ai_server/LatentSync")
 from tqdm import tqdm
 from latentsync.utils.util import gather_video_paths_recursively
-
 
 def write_fileslist(fileslist_path):
     with open(fileslist_path, "w") as _:
@@ -22,7 +22,7 @@ def write_fileslist(fileslist_path):
 
 
 def append_fileslist(fileslist_path, video_paths):
-    with open(fileslist_path, "a") as f:
+    with open(fileslist_path, "w") as f:
         for video_path in tqdm(video_paths):
             f.write(f"{video_path}\n")
 
@@ -34,12 +34,12 @@ def process_input_dir(fileslist_path, input_dir):
 
 
 if __name__ == "__main__":
-    fileslist_path = "/mnt/bn/maliva-gen-ai-v2/chunyu.li/fileslist/all_data_v6.txt"
+    fileslist_path = "/home/qc/ai_server/ai_server/LatentSync/fileslist/val.txt"
 
     write_fileslist(fileslist_path)
-    process_input_dir(fileslist_path, "/mnt/bn/maliva-gen-ai-v2/chunyu.li/VoxCeleb2/high_visual_quality/train")
-    process_input_dir(fileslist_path, "/mnt/bn/maliva-gen-ai-v2/chunyu.li/HDTF/high_visual_quality/train")
-    process_input_dir(fileslist_path, "/mnt/bn/maliva-gen-ai-v2/chunyu.li/avatars/high_visual_quality/train")
-    process_input_dir(fileslist_path, "/mnt/bn/maliva-gen-ai-v2/chunyu.li/multilingual/high_visual_quality")
-    process_input_dir(fileslist_path, "/mnt/bn/maliva-gen-ai-v2/chunyu.li/celebv_text/high_visual_quality/train")
-    process_input_dir(fileslist_path, "/mnt/bn/maliva-gen-ai-v2/chunyu.li/youtube/high_visual_quality")
+    process_input_dir(fileslist_path, "/home/qc/ai_server/ai_server/LatentSync/high_visual_quality/val")
+
+    fileslist_path = "/home/qc/ai_server/ai_server/LatentSync/fileslist/train.txt"
+
+    write_fileslist(fileslist_path)
+    process_input_dir(fileslist_path, "/home/qc/ai_server/ai_server/LatentSync/high_visual_quality/train")

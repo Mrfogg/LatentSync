@@ -119,7 +119,7 @@ with gr.Blocks(title="LatentSync Video Processing") as demo:
 
             with gr.Row():
                 guidance_scale = gr.Slider(
-                    minimum=1.0,
+                    minimum=0,
                     maximum=3.5,
                     value=1.5,
                     step=0.5,

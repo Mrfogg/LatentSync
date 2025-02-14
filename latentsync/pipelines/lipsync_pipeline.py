@@ -43,18 +43,18 @@ class LipsyncPipeline(DiffusionPipeline):
     _optional_components = []
 
     def __init__(
-        self,
-        vae: AutoencoderKL,
-        audio_encoder: Audio2Feature,
-        unet: UNet3DConditionModel,
-        scheduler: Union[
-            DDIMScheduler,
-            PNDMScheduler,
-            LMSDiscreteScheduler,
-            EulerDiscreteScheduler,
-            EulerAncestralDiscreteScheduler,
-            DPMSolverMultistepScheduler,
-        ],
+            self,
+            vae: AutoencoderKL,
+            audio_encoder: Audio2Feature,
+            unet: UNet3DConditionModel,
+            scheduler: Union[
+                DDIMScheduler,
+                PNDMScheduler,
+                LMSDiscreteScheduler,
+                EulerDiscreteScheduler,
+                EulerAncestralDiscreteScheduler,
+                DPMSolverMultistepScheduler,
+            ],
     ):
         super().__init__()
 
@@ -141,9 +141,9 @@ class LipsyncPipeline(DiffusionPipeline):
             return self.device
         for module in self.unet.modules():
             if (
-                hasattr(module, "_hf_hook")
-                and hasattr(module._hf_hook, "execution_device")
-                and module._hf_hook.execution_device is not None
+                    hasattr(module, "_hf_hook")
+                    and hasattr(module._hf_hook, "execution_device")
+                    and module._hf_hook.execution_device is not None
             ):
                 return torch.device(module._hf_hook.execution_device)
         return self.device
@@ -178,7 +178,7 @@ class LipsyncPipeline(DiffusionPipeline):
             raise ValueError(f"`height` and `width` have to be divisible by 8 but are {height} and {width}.")
 
         if (callback_steps is None) or (
-            callback_steps is not None and (not isinstance(callback_steps, int) or callback_steps <= 0)
+                callback_steps is not None and (not isinstance(callback_steps, int) or callback_steps <= 0)
         ):
             raise ValueError(
                 f"`callback_steps` has to be a positive integer but is {callback_steps} of type"
@@ -202,7 +202,7 @@ class LipsyncPipeline(DiffusionPipeline):
         return latents
 
     def prepare_mask_latents(
-        self, mask, masked_image, height, width, dtype, device, generator, do_classifier_free_guidance
+            self, mask, masked_image, height, width, dtype, device, generator, do_classifier_free_guidance
     ):
         # resize the mask to latents shape as we concatenate the mask to the latents
         # we do that before converting to dtype to avoid breaking in case we're using cpu_offload
@@ -266,7 +266,10 @@ class LipsyncPipeline(DiffusionPipeline):
         boxes = []
         affine_matrices = []
         print(f"Affine transforming {len(video_frames)} faces...")
+        i = 0
         for frame in tqdm.tqdm(video_frames):
+            print("affine transforming...", "%d/%d" % (i, len(video_frames)), video_path)
+            i += 1
             face, box, affine_matrix = self.image_processor.affine_transform(frame)
             faces.append(face)
             boxes.append(box)
@@ -294,25 +297,25 @@ class LipsyncPipeline(DiffusionPipeline):
 
     @torch.no_grad()
     def __call__(
-        self,
-        video_path: str,
-        audio_path: str,
-        video_out_path: str,
-        video_mask_path: str = None,
-        num_frames: int = 16,
-        video_fps: int = 25,
-        audio_sample_rate: int = 16000,
-        height: Optional[int] = None,
-        width: Optional[int] = None,
-        num_inference_steps: int = 20,
-        guidance_scale: float = 1.5,
-        weight_dtype: Optional[torch.dtype] = torch.float16,
-        eta: float = 0.0,
-        mask: str = "fix_mask",
-        generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
-        callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
-        callback_steps: Optional[int] = 1,
-        **kwargs,
+            self,
+            video_path: str,
+            audio_path: str,
+            video_out_path: str,
+            video_mask_path: str = None,
+            num_frames: int = 16,
+            video_fps: int = 25,
+            audio_sample_rate: int = 16000,
+            height: Optional[int] = None,
+            width: Optional[int] = None,
+            num_inference_steps: int = 20,
+            guidance_scale: float = 1.5,
+            weight_dtype: Optional[torch.dtype] = torch.float16,
+            eta: float = 0.0,
+            mask: str = "fix_mask",
+            generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
+            callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
+            callback_steps: Optional[int] = 1,
+            **kwargs,
     ):
         is_train = self.unet.training
         self.unet.eval()
@@ -325,7 +328,7 @@ class LipsyncPipeline(DiffusionPipeline):
 
         faces, original_video_frames, boxes, affine_matrices = self.affine_transform_video(video_path)
         audio_samples = read_audio(audio_path)
-
+        print("reading audio samples...")
         # 1. Default height and width to unet
         height = height or self.unet.config.sample_size * self.vae_scale_factor
         width = width or self.unet.config.sample_size * self.vae_scale_factor
@@ -371,18 +374,18 @@ class LipsyncPipeline(DiffusionPipeline):
             device,
             generator,
         )
-
+        print(f"Generating {len(all_latents)} latents...")
         for i in tqdm.tqdm(range(num_inferences), desc="Doing inference..."):
             if self.unet.add_audio_layer:
-                audio_embeds = torch.stack(whisper_chunks[i * num_frames : (i + 1) * num_frames])
+                audio_embeds = torch.stack(whisper_chunks[i * num_frames: (i + 1) * num_frames])
                 audio_embeds = audio_embeds.to(device, dtype=weight_dtype)
                 if do_classifier_free_guidance:
                     null_audio_embeds = torch.zeros_like(audio_embeds)
                     audio_embeds = torch.cat([null_audio_embeds, audio_embeds])
             else:
                 audio_embeds = None
-            inference_faces = faces[i * num_frames : (i + 1) * num_frames]
-            latents = all_latents[:, :, i * num_frames : (i + 1) * num_frames]
+            inference_faces = faces[i * num_frames: (i + 1) * num_frames]
+            latents = all_latents[:, :, i * num_frames: (i + 1) * num_frames]
             pixel_values, masked_pixel_values, masks = self.image_processor.prepare_masks_and_masked_images(
                 inference_faces, affine_transform=False
             )
@@ -459,15 +462,20 @@ class LipsyncPipeline(DiffusionPipeline):
         if is_train:
             self.unet.train()
 
-        temp_dir = "temp"
-        if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
+        temp_dir = "temp_inf"
+        # if os.path.exists(temp_dir):
+        #     shutil.rmtree(temp_dir)
         os.makedirs(temp_dir, exist_ok=True)
+        import uuid
+        n = uuid.uuid4().__str__()
 
-        write_video(os.path.join(temp_dir, "video.mp4"), synced_video_frames, fps=25)
+        write_video(os.path.join(temp_dir, n + ".mp4"), synced_video_frames, fps=25)
         # write_video(video_mask_path, masked_video_frames, fps=25)
 
-        sf.write(os.path.join(temp_dir, "audio.wav"), audio_samples, audio_sample_rate)
+        sf.write(os.path.join(temp_dir, n + ".wav"), audio_samples, audio_sample_rate)
 
-        command = f"ffmpeg -y -loglevel error -nostdin -i {os.path.join(temp_dir, 'video.mp4')} -i {os.path.join(temp_dir, 'audio.wav')} -c:v libx264 -c:a aac -q:v 0 -q:a 0 {video_out_path}"
+        command = f"/home/qc/miniconda3/envs/latentsync/bin/ffmpeg -y -loglevel error -nostdin -i {os.path.join(temp_dir, n + '.mp4')} -i {os.path.join(temp_dir, n + '.wav')} -c:v libx264 -c:a aac -q:v 0 -q:a 0 {video_out_path}"
+        print(command, "aaaaaaaaaaaaaa")
+        conda_env = os.environ.get('CONDA_DEFAULT_ENV')
+        print(f"当前 Conda 环境: {conda_env}")
         subprocess.run(command, shell=True)

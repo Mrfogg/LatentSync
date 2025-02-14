@@ -1,15 +1,15 @@
 data:
   syncnet_config_path: configs/syncnet/syncnet_16_pixel.yaml
   train_output_dir: debug/unet
-  train_fileslist: /mnt/bn/maliva-gen-ai-v2/chunyu.li/fileslist/all_data_v6.txt
-  train_data_dir: ""
-  audio_embeds_cache_dir: /mnt/bn/maliva-gen-ai-v2/chunyu.li/audio_cache/whisper_new
-  audio_mel_cache_dir: /mnt/bn/maliva-gen-ai-v2/chunyu.li/audio_cache/mel_new
+  train_fileslist: /home/qc/ai_server/ai_server/LatentSync/fileslist/train.txt
+  train_data_dir: /home/qc/ai_server/ai_server/LatentSync/high_visual_quality/train
+  audio_embeds_cache_dir: /home/qc/ai_server/ai_server/LatentSync/audio_cache/whisper_new
+  audio_mel_cache_dir: /home/qc/ai_server/ai_server/LatentSync/audio_cache/mel_new
 
-  val_video_path: assets/demo1_video.mp4
-  val_audio_path: assets/demo1_audio.wav
-  batch_size: 8 # 8
-  num_workers: 11 # 11
+  val_video_path: /home/qc/ai_server/ai_server/assets/数字人/苏华仁/333.mp4
+  val_audio_path: /home/qc/ai_server/ai_server/assets/tmp/CSEtjyk8aMQzsgkRPw6ktcOhRXVZQv0iMjdb.wav
+  batch_size: 5 # 8
+  num_workers: 4 # 11
   num_frames: 16
   resolution: 256
   mask: fix_mask
@@ -18,7 +18,7 @@ data:
 
 ckpt:
   resume_ckpt_path: checkpoints/latentsync_unet.pt
-  save_ckpt_steps: 5000
+  save_ckpt_steps: 1000
 
 run:
   pixel_space_supervise: false
@@ -28,14 +28,14 @@ run:
   recon_loss_weight: 1 # 1
   guidance_scale: 1.0 # 1.5 or 1.0
   trepa_loss_weight: 10
-  inference_steps: 20
+  inference_steps: 30
   seed: 1247
   use_mixed_noise: true
   mixed_noise_alpha: 1 # 1
   mixed_precision_training: true
   enable_gradient_checkpointing: false
   enable_xformers_memory_efficient_attention: true
-  max_train_steps: 10000000
+  max_train_steps: 100000
   max_train_epochs: -1
 
 optimizer:

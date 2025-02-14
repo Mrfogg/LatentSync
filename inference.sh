@@ -1,4 +1,4 @@
-#!/bin/bash
+ #!/bin/bash
 
 python -m scripts.inference \
     --unet_config_path "configs/unet/second_stage.yaml" \

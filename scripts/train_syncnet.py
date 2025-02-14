@@ -76,7 +76,8 @@ def main(config):
     # Dataset and Dataloader setup
     train_dataset = SyncNetDataset(config.data.train_data_dir, config.data.train_fileslist, config)
     val_dataset = SyncNetDataset(config.data.val_data_dir, config.data.val_fileslist, config)
-
+    print(f"Number of training samples: {len(train_dataset)}")
+    print(f"Number of validation samples: {len(val_dataset)}")
     train_distributed_sampler = DistributedSampler(
         train_dataset,
         num_replicas=num_processes,
@@ -142,6 +143,7 @@ def main(config):
     # DDP wrapper
     syncnet = DDP(syncnet, device_ids=[local_rank], output_device=local_rank)
 
+    print(len(train_dataloader),"Ttttt")
     num_update_steps_per_epoch = math.ceil(len(train_dataloader))
     num_train_epochs = math.ceil(config.run.max_train_steps / num_update_steps_per_epoch)
     # validation_steps = int(config.ckpt.save_ckpt_steps // 5)

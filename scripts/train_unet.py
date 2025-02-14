@@ -62,6 +62,7 @@ def main(config):
     local_rank = init_dist()
     global_rank = dist.get_rank()
     num_processes = dist.get_world_size()
+    print(num_processes, "num_processes")
     is_main_process = global_rank == 0
 
     seed = config.run.seed + global_rank

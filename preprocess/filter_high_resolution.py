@@ -47,16 +47,18 @@ class FaceDetector:
         results = self.face_detection.process(image)
 
         if not results.detections:  # Face not detected
+            print("没检测到脸")
             raise Exception("Face not detected")
 
-        if len(results.detections) != 1:
-            return False
+        # if len(results.detections) != 1:
+        #     return False
         detection = results.detections[0]  # Only use the first face in the image
 
         bounding_box = detection.location_data.relative_bounding_box
         face_width = int(bounding_box.width * width)
         face_height = int(bounding_box.height * height)
         if face_width < self.resolution or face_height < self.resolution:
+            print("脸太小")
             return False
         return True
 
