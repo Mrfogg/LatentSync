@@ -1,15 +1,8 @@
-from latentsync.utils.util import read_video,save_image
-from PIL import Image
+import os
 
-frames = read_video("tmp.mp4", change_fps=False)
-from preprocess.filter_high_resolution import FaceDetector
-fd = FaceDetector()
-i = 0
-for frame in frames:
-    if not fd.detect_face(frame):
-        image = Image.fromarray(frame)
+# 文件路径
+file_path = "uploads/video/20250223/202502231134452bdbe1839.mp4"
 
-        # 保存为图片文件
-        image.save("output_image.png")  # 支持格式：PNG, JPEG, BMP 等
-        print(i)
-    i += 1
+# 提取文件名
+file_name = os.path.basename(file_path)
+print(file_name)

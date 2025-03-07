@@ -17,61 +17,66 @@ from omegaconf import OmegaConf
 import torch
 from diffusers import AutoencoderKL, DDIMScheduler
 from latentsync.models.unet import UNet3DConditionModel
-from latentsync.pipelines.lipsync_pipeline import LipsyncPipeline
+from latentsync.pipelines.lipsync_hang import LipsyncPipeline
 from diffusers.utils.import_utils import is_xformers_available
 from accelerate.utils import set_seed
 from latentsync.whisper.audio2feature import Audio2Feature
 
+pipeline = None
 
-def main(config, args):
-    # Check if the GPU supports float16
+
+def main(config, args, queue):
     is_fp16_supported = torch.cuda.is_available() and torch.cuda.get_device_capability()[0] > 7
     dtype = torch.float16 if is_fp16_supported else torch.float32
+    global pipeline
+    if pipeline is None:
 
-    print(f"Input video path: {args.video_path}")
-    print(f"Input audio path: {args.audio_path}")
-    print(f"Loaded checkpoint path: {args.inference_ckpt_path}")
+        # Check if the GPU supports float16
 
-    scheduler = DDIMScheduler.from_pretrained("configs")
+        print(f"Input video path: {args.video_path}")
+        print(f"Input audio path: {args.audio_path}")
+        print(f"Loaded checkpoint path: {args.inference_ckpt_path}")
 
-    if config.model.cross_attention_dim == 768:
-        whisper_model_path = "checkpoints/whisper/small.pt"
-    elif config.model.cross_attention_dim == 384:
-        whisper_model_path = "checkpoints/whisper/tiny.pt"
-    else:
-        raise NotImplementedError("cross_attention_dim must be 768 or 384")
+        scheduler = DDIMScheduler.from_pretrained("configs")
 
-    audio_encoder = Audio2Feature(model_path=whisper_model_path, device="cuda", num_frames=config.data.num_frames)
+        if config.model.cross_attention_dim == 768:
+            whisper_model_path = "checkpoints/whisper/small.pt"
+        elif config.model.cross_attention_dim == 384:
+            whisper_model_path = "checkpoints/whisper/tiny.pt"
+        else:
+            raise NotImplementedError("cross_attention_dim must be 768 or 384")
 
-    vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse", torch_dtype=dtype)
-    vae.config.scaling_factor = 0.18215
-    vae.config.shift_factor = 0
+        audio_encoder = Audio2Feature(model_path=whisper_model_path, device="cuda", num_frames=config.data.num_frames)
 
-    unet, _ = UNet3DConditionModel.from_pretrained(
-        OmegaConf.to_container(config.model),
-        args.inference_ckpt_path,  # load checkpoint
-        device="cpu",
-    )
+        vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse", torch_dtype=dtype)
+        vae.config.scaling_factor = 0.18215
+        vae.config.shift_factor = 0
 
-    unet = unet.to(dtype=dtype)
+        unet, _ = UNet3DConditionModel.from_pretrained(
+            OmegaConf.to_container(config.model),
+            args.inference_ckpt_path,  # load checkpoint
+            device="cpu",
+        )
 
-    # set xformers
-    if is_xformers_available():
-        unet.enable_xformers_memory_efficient_attention()
+        unet = unet.to(dtype=dtype)
 
-    pipeline = LipsyncPipeline(
-        vae=vae,
-        audio_encoder=audio_encoder,
-        unet=unet,
-        scheduler=scheduler,
-    ).to("cuda")
-    if args.seed != -1:
-        set_seed(args.seed)
-    else:
-        torch.seed()
+        # set xformers
+        if is_xformers_available():
+            unet.enable_xformers_memory_efficient_attention()
+        pipeline = LipsyncPipeline(
+            vae=vae,
+            audio_encoder=audio_encoder,
+            unet=unet,
+            scheduler=scheduler,
+            queue=queue,
+        ).to("cuda")
+        if args.seed != -1:
+            set_seed(args.seed)
+        else:
+            torch.seed()
 
-    print(f"Initial seed: {torch.initial_seed()}")
-    print(args.inference_steps,"steps")
+        print(f"Initial seed: {torch.initial_seed()}")
+        print(args.inference_steps, "steps")
     pipeline(
         video_path=args.video_path,
         audio_path=args.audio_path,

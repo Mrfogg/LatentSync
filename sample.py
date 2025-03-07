@@ -44,8 +44,8 @@ def split_files(source_folder, train_folder, val_folder, train_ratio=0.8):
 
 
 # 使用示例
-source_folder = "high_visual_quality"  # 源文件夹路径
-train_folder = "high_visual_quality/train"  # 训练文件夹路径
-val_folder = "high_visual_quality/val"  # 验证文件夹路径
+source_folder = "/data/high_visual_quality"  # 源文件夹路径
+train_folder = "/data/high_visual_quality/train"  # 训练文件夹路径
+val_folder = "/data/high_visual_quality/val"  # 验证文件夹路径
 
 split_files(source_folder, train_folder, val_folder, train_ratio=0.8)

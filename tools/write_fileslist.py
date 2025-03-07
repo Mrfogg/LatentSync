@@ -37,9 +37,9 @@ if __name__ == "__main__":
     fileslist_path = "/home/qc/ai_server/ai_server/LatentSync/fileslist/val.txt"
 
     write_fileslist(fileslist_path)
-    process_input_dir(fileslist_path, "/home/qc/ai_server/ai_server/LatentSync/high_visual_quality/val")
+    process_input_dir(fileslist_path, "/data/high_visual_quality/val")
 
     fileslist_path = "/home/qc/ai_server/ai_server/LatentSync/fileslist/train.txt"
 
     write_fileslist(fileslist_path)
-    process_input_dir(fileslist_path, "/home/qc/ai_server/ai_server/LatentSync/high_visual_quality/train")
+    process_input_dir(fileslist_path, "/data/high_visual_quality/train")

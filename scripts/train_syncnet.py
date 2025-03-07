@@ -72,12 +72,10 @@ def main(config):
         vae.to(device)
     else:
         vae = None
-
     # Dataset and Dataloader setup
     train_dataset = SyncNetDataset(config.data.train_data_dir, config.data.train_fileslist, config)
     val_dataset = SyncNetDataset(config.data.val_data_dir, config.data.val_fileslist, config)
-    print(f"Number of training samples: {len(train_dataset)}")
-    print(f"Number of validation samples: {len(val_dataset)}")
+
     train_distributed_sampler = DistributedSampler(
         train_dataset,
         num_replicas=num_processes,
@@ -97,7 +95,7 @@ def main(config):
         drop_last=True,
         worker_init_fn=train_dataset.worker_init_fn,
     )
-    
+
     num_samples_limit = 640
 
     val_batch_size = min(
@@ -121,7 +119,6 @@ def main(config):
     optimizer = torch.optim.AdamW(
         list(filter(lambda p: p.requires_grad, syncnet.parameters())), lr=config.optimizer.lr
     )
-
     if config.ckpt.resume_ckpt_path != "":
         if is_main_process:
             logger.info(f"Load checkpoint from: {config.ckpt.resume_ckpt_path}")
@@ -143,7 +140,6 @@ def main(config):
     # DDP wrapper
     syncnet = DDP(syncnet, device_ids=[local_rank], output_device=local_rank)
 
-    print(len(train_dataloader),"Ttttt")
     num_update_steps_per_epoch = math.ceil(len(train_dataloader))
     num_train_epochs = math.ceil(config.run.max_train_steps / num_update_steps_per_epoch)
     # validation_steps = int(config.ckpt.save_ckpt_steps // 5)
@@ -167,7 +163,6 @@ def main(config):
 
     # Support mixed-precision training
     scaler = torch.cuda.amp.GradScaler() if config.run.mixed_precision_training else None
-
     for epoch in range(first_epoch, num_train_epochs):
         train_dataloader.sampler.set_epoch(epoch)
         syncnet.train()
@@ -181,15 +176,15 @@ def main(config):
 
             if config.data.latent_space:
                 max_batch_size = (
-                    num_samples_limit // config.data.num_frames
+                        num_samples_limit // config.data.num_frames
                 )  # due to the limited cuda memory, we split the input frames into parts
                 if frames.shape[0] > max_batch_size:
                     assert (
-                        frames.shape[0] % max_batch_size == 0
+                            frames.shape[0] % max_batch_size == 0
                     ), f"max_batch_size {max_batch_size} should be divisible by batch_size {frames.shape[0]}"
                     frames_part_results = []
                     for i in range(0, frames.shape[0], max_batch_size):
-                        frames_part = frames[i : i + max_batch_size]
+                        frames_part = frames[i: i + max_batch_size]
                         frames_part = rearrange(frames_part, "b f c h w -> (b f) c h w")
                         with torch.no_grad():
                             frames_part = vae.encode(frames_part).latent_dist.sample() * 0.18215
@@ -206,7 +201,7 @@ def main(config):
 
             if config.data.lower_half:
                 height = frames.shape[2]
-                frames = frames[:, :, height // 2 :, :]
+                frames = frames[:, :, height // 2:, :]
 
             # audio_embeds = wav2vec_encoder(audio_samples).last_hidden_state
 
@@ -309,7 +304,7 @@ def validation(val_dataloader, device, syncnet, cosine_loss, latent_space, lower
 
             if lower_half:
                 height = frames.shape[2]
-                frames = frames[:, :, height // 2 :, :]
+                frames = frames[:, :, height // 2:, :]
 
             with torch.autocast(device_type="cuda", dtype=torch.float16):
                 vision_embeds, audio_embeds = syncnet(frames, audio_samples)

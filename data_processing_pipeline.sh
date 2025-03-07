@@ -1,9 +1,9 @@
 #!/bin/bash
 
 python -m preprocess.data_processing_pipeline \
-    --total_num_workers 20 \
+    --total_num_workers 1 \
     --per_gpu_num_workers 10 \
     --resolution 256 \
     --sync_conf_threshold 3 \
     --temp_dir temp \
-    --input_dir ./data
+    --input_dir /data/shr/video_data
