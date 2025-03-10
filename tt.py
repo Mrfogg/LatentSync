@@ -1,8 +1,5 @@
-import os
+import numpy as np
+arr = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+print(arr[::-1])
+print(arr)
 
-# 文件路径
-file_path = "uploads/video/20250223/202502231134452bdbe1839.mp4"
-
-# 提取文件名
-file_name = os.path.basename(file_path)
-print(file_name)

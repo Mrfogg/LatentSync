@@ -47,7 +47,7 @@ def read_json(filepath: str):
 def read_video(video_path: str, change_fps=True, use_decord=True):
     if change_fps:
 
-        temp_dir = "temp" + uuid.uuid4().__str__()
+        temp_dir = "/tmp/" + uuid.uuid4().__str__()
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
         os.makedirs(temp_dir, exist_ok=True)

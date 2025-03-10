@@ -55,10 +55,10 @@ class LipsyncPipeline(DiffusionPipeline):
                 EulerAncestralDiscreteScheduler,
                 DPMSolverMultistepScheduler,
             ],
-            queue
+
     ):
         super().__init__()
-        self.queue = queue
+
         if hasattr(scheduler.config, "steps_offset") and scheduler.config.steps_offset != 1:
             deprecation_message = (
                 f"The configuration file of this scheduler: {scheduler} is outdated. `steps_offset`"
@@ -261,61 +261,31 @@ class LipsyncPipeline(DiffusionPipeline):
         images = images.cpu().numpy()
         return images
 
-    def restore_affine_from_disk(self, cache_path):
-        if os.path.exists(cache_path):
-            faces = torch.load(cache_path + "faces.pth")
-            boxes = np.load(cache_path + "box.npy")
-            affine_matrices = np.load(cache_path + "affine_matrix.npy")
-            video_frames = np.load(cache_path + "video_frames.npy")
-            return faces, video_frames, boxes, affine_matrices
-        else:
-            return None, None, None, None
-
     def affine_transform_video(self, video_path):
-        cache_path = '/data/video_preprocess/' + os.path.basename(video_path) + '/'
-        faces_file_name = "faces.pth"
-        boxes_file_name = "box.npy"
-        affine_matrix_file_name = "affine_matrix.npy"
-        video_frames_file_name = "video_frames.npy"
-        if os.path.exists(cache_path):
-            faces = torch.load(cache_path + faces_file_name)
-            boxes = np.load(cache_path + boxes_file_name)
-            affine_matrices = np.load(cache_path + affine_matrix_file_name)
-            video_frames = np.load(cache_path + video_frames_file_name)
-            return faces, video_frames, boxes, affine_matrices
-        os.makedirs(cache_path)
-        video_frames = read_video(video_path, use_decord=False)
-        faces = []
-        boxes = []
-        affine_matrices = []
-        print(f"Affine transforming {len(video_frames)} faces...")
-        i = 0
-        for frame in tqdm.tqdm(video_frames):
-            i += 1
-            face, box, affine_matrix = self.image_processor.affine_transform(frame)
-            faces.append(face)
-            boxes.append(box)
-            affine_matrices.append(affine_matrix)
-
-        faces = torch.stack(faces)
-        f = torch.flip(faces, dims=(0,))
-        faces = torch.cat((faces, f), dim=0)
-        torch.save(faces, cache_path + faces_file_name)
-
-        boxes = np.concatenate((boxes, boxes[::(-1)]))
-        video_frames = np.concatenate((video_frames, video_frames[::-1]))
-        affine_matrices = np.concatenate((affine_matrices, affine_matrices[::-1]))
-        np.save(cache_path + video_frames_file_name, video_frames)
-        np.save(cache_path + boxes_file_name, boxes)
-        np.save(cache_path + affine_matrix_file_name, affine_matrices)
-        return faces, video_frames, boxes, affine_matrices
+        return self.faces, self.video_frames, self.boxes, self.affine_matrices
+        # video_frames = read_video(video_path, use_decord=False)
+        # faces = []
+        # boxes = []
+        # affine_matrices = []
+        # print(f"Affine transforming {len(video_frames)} faces...")
+        # i = 0
+        # for frame in tqdm.tqdm(video_frames):
+        #     print("affine transforming...", "%d/%d" % (i, len(video_frames)), video_path)
+        #     i += 1
+        #     face, box, affine_matrix = self.image_processor.affine_transform(frame)
+        #     faces.append(face)
+        #     boxes.append(box)
+        #     affine_matrices.append(affine_matrix)
+        #
+        # faces = torch.stack(faces)
+        # return faces, video_frames, boxes, affine_matrices
 
     def restore_video(self, faces, video_frames, boxes, affine_matrices):
         video_frames = video_frames[: faces.shape[0]]
         out_frames = []
         print(f"Restoring {len(faces)} faces...")
         for index, face in enumerate(tqdm.tqdm(faces)):
-            x1, y1, x2, y2 = boxes[index % len(boxes)]
+            x1, y1, x2, y2 = boxes[index]
             height = int(y2 - y1)
             width = int(x2 - x1)
             face = torchvision.transforms.functional.resize(face, size=(height, width), antialias=True)
@@ -323,8 +293,7 @@ class LipsyncPipeline(DiffusionPipeline):
             face = (face / 2 + 0.5).clamp(0, 1)
             face = (face * 255).to(torch.uint8).cpu().numpy()
             # face = cv2.resize(face, (width, height), interpolation=cv2.INTER_LANCZOS4)
-            out_frame = self.image_processor.restorer.restore_img(video_frames[index % len(video_frames)], face,
-                                                                  affine_matrices[index % len(affine_matrices)])
+            out_frame = self.image_processor.restorer.restore_img(video_frames[index], face, affine_matrices[index])
             out_frames.append(out_frame)
         return np.stack(out_frames, axis=0)
 
@@ -387,21 +356,7 @@ class LipsyncPipeline(DiffusionPipeline):
             whisper_feature = self.audio_encoder.audio2feat(audio_path)
             whisper_chunks = self.audio_encoder.feature2chunks(feature_array=whisper_feature, fps=video_fps)
 
-            # num_inferences = min(len(faces), len(whisper_chunks)) // num_frames
-            num_inferences = len(whisper_chunks) // num_frames
-            # f = faces
-            # b = boxes
-            # fm = original_video_frames
-            # am = affine_matrices
-            # for i in range(1, 99, 1):
-            #     if len(whisper_chunks) > len(faces):
-            #         faces = torch.cat((faces, f))
-            #         original_video_frames = np.concatenate((original_video_frames, fm))
-            #         affine_matrices = np.concatenate((affine_matrices, am))
-            #         boxes = np.concatenate((boxes, b))
-            #         print("chunk size:%d, faces size:%d", len(whisper_chunks), len(faces))
-            #     else:
-            #         break
+            num_inferences = min(len(faces), len(whisper_chunks)) // num_frames
         else:
             num_inferences = len(faces) // num_frames
 
@@ -423,7 +378,6 @@ class LipsyncPipeline(DiffusionPipeline):
         )
         print(f"Generating {len(all_latents)} latents...")
         for i in tqdm.tqdm(range(num_inferences), desc="Doing inference..."):
-            self.queue.send_complete(str(i / num_inferences))  # 发送进度信息
             if self.unet.add_audio_layer:
                 audio_embeds = torch.stack(whisper_chunks[i * num_frames: (i + 1) * num_frames])
                 audio_embeds = audio_embeds.to(device, dtype=weight_dtype)
@@ -432,7 +386,7 @@ class LipsyncPipeline(DiffusionPipeline):
                     audio_embeds = torch.cat([null_audio_embeds, audio_embeds])
             else:
                 audio_embeds = None
-            inference_faces = faces[i * num_frames % len(faces): i * num_frames % len(faces) + num_frames]
+            inference_faces = faces[i * num_frames: (i + 1) * num_frames]
             latents = all_latents[:, :, i * num_frames: (i + 1) * num_frames]
             pixel_values, masked_pixel_values, masks = self.image_processor.prepare_masks_and_masked_images(
                 inference_faces, affine_transform=False

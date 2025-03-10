@@ -24,7 +24,7 @@ data:
   num_workers: 11 # 11
   latent_space: false
   num_frames: 16
-  resolution: 384
+  resolution: 256
   train_fileslist: /home/qc/ai_server/ai_server/LatentSync/fileslist/train.txt
   train_data_dir: /data/high_visual_quality/train
   val_fileslist: /home/qc/ai_server/ai_server/LatentSync/fileslist/val.txt

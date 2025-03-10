@@ -3,7 +3,7 @@ import json
 from omegaconf import OmegaConf
 import time
 import uuid
-from scripts.inference import main
+from scripts.inference_tmp import main
 from dataclasses import dataclass
 
 
@@ -19,22 +19,24 @@ class Queue:
 
     def send_complete(self, complete):
         self.msg['complete'] = str(complete)
-        r.rpush('digital_human_process_coze_result', json.dumps(self.msg))
+        r.rpush('digital_human_process_result', json.dumps(self.msg))
 
 
 r = redis.Redis(host='localhost', port=6379, db=0, password='qazwsx')
 args = Para()
-args.unet_config_path = "configs/unet/second_stage.yaml"
-args.inference_ckpt_path = "debug/unet/train-2025_03_02-19:22:37/checkpoints/checkpoint-20000.pt"
+args.unet_config_path = "configs/unet/second_stage_prod.yaml"
+args.inference_ckpt_path = "/data/model_test/checkpoint-6000-lr.pt"
 args.seed = 1
 config = OmegaConf.load(args.unet_config_path)
 
 while True:
-    item = r.lpop('digital_human_process_coze')
+    item = r.lpop('digital_human_process')
     if item is None:
         time.sleep(1)
         continue
     m = json.loads(item)
+    # print(m)
+    # continue
     que = Queue(rdb=r, msg=m)
     args.video_path = m['video_file_path']
     args.audio_path = m['audio_file_path']
@@ -44,4 +46,4 @@ while True:
     args.gpu_id = m["gpu_id"]
     main(config, args, que)
     m["complete"] = "-1"  # -1代表完全结束
-    r.rpush('digital_human_process_coze_result', json.dumps(m))
+    r.rpush('digital_human_process_result', json.dumps(m))

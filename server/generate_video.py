@@ -1,5 +1,5 @@
 import sys
-from scripts.inference import main
+from scripts.inference_tmp import main
 from dataclasses import dataclass
 from peewee import MySQLDatabase, Model, CharField, IntegerField
 from server.queue import db

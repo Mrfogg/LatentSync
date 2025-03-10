@@ -6,18 +6,18 @@ data:
   audio_embeds_cache_dir: /home/qc/ai_server/ai_server/LatentSync/audio_cache/whisper_new
   audio_mel_cache_dir: /home/qc/ai_server/ai_server/LatentSync/audio_cache/mel_new
 
-  val_video_path: assets/demo1_video.mp4
-  val_audio_path: assets/demo1_audio.wav
-  batch_size: 2 # 8
+  val_video_path: /home/qc/ai_server/ai_server/upload/20250304195055e36516680.mp4
+  val_audio_path:  /home/qc/ai_server/ai_server/upload/uJqiJIK1CHl2pKS6nbCjhDGTwNG9qI1K3kwq.mp3
+  batch_size: 5 # 8
   num_workers: 4 # 11
   num_frames: 16
-  resolution: 384
+  resolution: 256
   mask: fix_mask
   audio_sample_rate: 16000
   video_fps: 25
 
 ckpt:
-  resume_ckpt_path: /home/qc/ai_server/ai_server/LatentSync/debug/unet/train-2025_03_02-16:02:19/checkpoints/checkpoint-1000.pt
+  resume_ckpt_path: /home/qc/ai_server/ai_server/LatentSync/checkpoints/latentsync_unet.pt
   save_ckpt_steps: 1000
 
 run:
@@ -26,7 +26,7 @@ run:
   sync_loss_weight: 0.05 # 1/283
   perceptual_loss_weight: 0.1 # 0.1
   recon_loss_weight: 1 # 1
-  guidance_scale: 1.0 # 1.5 or 1.0
+  guidance_scale: 3.0 # 1.5 or 1.0
   trepa_loss_weight: 10
   inference_steps: 30
   seed: 1247
@@ -39,7 +39,7 @@ run:
   max_train_epochs: -1
 
 optimizer:
-  lr: 1e-5
+  lr: e-7
   scale_lr: false
   max_grad_norm: 1.0
   lr_scheduler: constant
@@ -51,7 +51,7 @@ model:
   custom_audio_layer: false
   audio_condition_method: cross_attn # Choose between [cross_attn, group_norm]
   attention_head_dim: 8
-  block_out_channels: [320, 640, 1280, 1280]
+  block_out_channels: [ 320, 640, 1280, 1280 ]
   center_input_sample: false
   cross_attention_dim: 384
   down_block_types:
@@ -87,7 +87,7 @@ model:
   # When we started the project, we used the codebase of AnimateDiff and tried motion module, the results are poor
   # We decied to leave the code here for possible future usage
   use_motion_module: false
-  motion_module_resolutions: [1, 2, 4, 8]
+  motion_module_resolutions: [ 1, 2, 4, 8 ]
   motion_module_mid_block: false
   motion_module_decoder_only: false
   motion_module_type: Vanilla
