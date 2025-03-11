@@ -25,7 +25,7 @@ from latentsync.whisper.audio2feature import Audio2Feature
 pipeline = None
 
 
-def main(config, args, queue):
+def main(config, args, queue=None):
     is_fp16_supported = torch.cuda.is_available() and torch.cuda.get_device_capability()[0] > 7
     dtype = torch.float16 if is_fp16_supported else torch.float32
     global pipeline
@@ -78,6 +78,7 @@ def main(config, args, queue):
         print(f"Initial seed: {torch.initial_seed()}")
         print(args.inference_steps, "steps")
     pipeline.queue = queue
+    pipeline.to("cuda:" + str(args.gpu_id))
     pipeline(
         video_path=args.video_path,
         audio_path=args.audio_path,

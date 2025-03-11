@@ -1,6 +1,6 @@
 import gradio as gr
 from pathlib import Path
-from scripts.inference import main
+from scripts.inference_tmp import main
 from omegaconf import OmegaConf
 import argparse
 from datetime import datetime
@@ -8,16 +8,18 @@ import os
 
 CONFIG_PATH = Path("configs/unet/second_stage_prod.yaml")
 
+
 def get_model_files(model_dir):
     """Get all model files from the specified directory."""
     model_dir = Path(model_dir)
     if not model_dir.exists():
         return []
-    
+
     model_files = []
     for ext in ['.pt', '.pth', '.ckpt']:
         model_files.extend([f for f in model_dir.glob(f'*{ext}')])
     return [str(f) for f in model_files]
+
 
 def process_video(
         video_path,
@@ -52,7 +54,7 @@ def process_video(
 
     # Parse the arguments
     args = create_args(video_path, audio_path, output_path, inference_steps, guidance_scale, seed, model_path)
-
+    args.gpu_id = 2
     try:
         result = main(
             config=config,
@@ -188,6 +190,7 @@ def create_interface(model_dir):
         )
 
     return demo
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

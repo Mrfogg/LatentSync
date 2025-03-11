@@ -25,7 +25,7 @@ class Queue:
 r = redis.Redis(host='localhost', port=6379, db=0, password='qazwsx')
 args = Para()
 args.unet_config_path = "configs/unet/second_stage_prod.yaml"
-args.inference_ckpt_path = "/data/model_test/checkpoint-6000-lr.pt"
+args.inference_ckpt_path = "/data/model_test/checkpoint-4000.pt"
 args.seed = 1
 config = OmegaConf.load(args.unet_config_path)
 

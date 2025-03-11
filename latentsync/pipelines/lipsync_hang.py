@@ -55,7 +55,7 @@ class LipsyncPipeline(DiffusionPipeline):
                 EulerAncestralDiscreteScheduler,
                 DPMSolverMultistepScheduler,
             ],
-            queue
+            queue=None
     ):
         super().__init__()
         self.queue = queue
@@ -328,6 +328,9 @@ class LipsyncPipeline(DiffusionPipeline):
             out_frames.append(out_frame)
         return np.stack(out_frames, axis=0)
 
+    def inference(self, image):
+        pass
+
     @torch.no_grad()
     def __call__(
             self,
@@ -387,21 +390,7 @@ class LipsyncPipeline(DiffusionPipeline):
             whisper_feature = self.audio_encoder.audio2feat(audio_path)
             whisper_chunks = self.audio_encoder.feature2chunks(feature_array=whisper_feature, fps=video_fps)
 
-            # num_inferences = min(len(faces), len(whisper_chunks)) // num_frames
             num_inferences = len(whisper_chunks) // num_frames
-            # f = faces
-            # b = boxes
-            # fm = original_video_frames
-            # am = affine_matrices
-            # for i in range(1, 99, 1):
-            #     if len(whisper_chunks) > len(faces):
-            #         faces = torch.cat((faces, f))
-            #         original_video_frames = np.concatenate((original_video_frames, fm))
-            #         affine_matrices = np.concatenate((affine_matrices, am))
-            #         boxes = np.concatenate((boxes, b))
-            #         print("chunk size:%d, faces size:%d", len(whisper_chunks), len(faces))
-            #     else:
-            #         break
         else:
             num_inferences = len(faces) // num_frames
 
@@ -423,7 +412,8 @@ class LipsyncPipeline(DiffusionPipeline):
         )
         print(f"Generating {len(all_latents)} latents...")
         for i in tqdm.tqdm(range(num_inferences), desc="Doing inference..."):
-            self.queue.send_complete(str(i / num_inferences))  # 发送进度信息
+            if self.queue is not None:
+                self.queue.send_complete(str(i / num_inferences))  # 发送进度信息
             if self.unet.add_audio_layer:
                 audio_embeds = torch.stack(whisper_chunks[i * num_frames: (i + 1) * num_frames])
                 audio_embeds = audio_embeds.to(device, dtype=weight_dtype)
