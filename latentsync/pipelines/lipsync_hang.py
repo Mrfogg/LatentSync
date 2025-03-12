@@ -291,12 +291,14 @@ class LipsyncPipeline(DiffusionPipeline):
         print(f"Affine transforming {len(video_frames)} faces...")
         i = 0
         for frame in tqdm.tqdm(video_frames):
+            if i == len(video_frames) - len(video_frames) % 16:
+                break
             i += 1
             face, box, affine_matrix = self.image_processor.affine_transform(frame)
             faces.append(face)
             boxes.append(box)
             affine_matrices.append(affine_matrix)
-
+        video_frames = video_frames[:len(faces)]
         faces = torch.stack(faces)
         f = torch.flip(faces, dims=(0,))
         faces = torch.cat((faces, f), dim=0)
@@ -453,11 +455,12 @@ class LipsyncPipeline(DiffusionPipeline):
             num_warmup_steps = len(timesteps) - num_inference_steps * self.scheduler.order
             with self.progress_bar(total=num_inference_steps) as progress_bar:
                 for j, t in enumerate(timesteps):
+
                     # expand the latents if we are doing classifier free guidance
                     latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
-
                     # concat latents, mask, masked_image_latents in the channel dimension
                     latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
+
                     latent_model_input = torch.cat(
                         [latent_model_input, mask_latents, masked_image_latents, image_latents], dim=1
                     )
