@@ -14,7 +14,7 @@ import soundfile as sf
 from loguru import logger
 import uuid
 import subprocess
-
+gpu_num = 3
 
 def affine_transform_video(video_path, image_processor):
     cache_path = '/home/qc/data/video_preprocess/' + os.path.basename(video_path) + '/'
@@ -58,7 +58,7 @@ def affine_transform_video(video_path, image_processor):
 
 def sub_process(in_queue, out_queue, config, args):
     processes = []
-    for i in range(3):
+    for i in range(gpu_num):
         p = mp.Process(target=init_pipeline, args=(in_queue, out_queue, config, args, i))
         processes.append(p)
         p.start()
@@ -105,7 +105,7 @@ class PipelineMaster:
         whisper_chunks = self.whisper_feature(audio_path)
         num_inferences = len(whisper_chunks) // num_frames
         if num_inferences > 10:
-            num_parts = 3
+            num_parts = gpu_num
         else:
             num_parts = 1
         part_size = num_inferences // num_parts  # 每份的基础大小
