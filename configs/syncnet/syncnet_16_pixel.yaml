@@ -1,26 +1,26 @@
 model:
   audio_encoder: # input (1, 80, 52)
     in_channels: 1
-    block_out_channels: [32, 64, 128, 256, 512, 1024, 2048]
-    downsample_factors: [[2, 1], 2, 2, 1, 2, 2, [2, 3]]
-    attn_blocks: [0, 0, 0, 0, 0, 0, 0]
+    block_out_channels: [ 32, 64, 128, 256, 512, 1024, 2048 ]
+    downsample_factors: [ [ 2, 1 ], 2, 2, 1, 2, 2, [ 2, 3 ] ]
+    attn_blocks: [ 0, 0, 0, 0, 0, 0, 0 ]
     dropout: 0.0
   visual_encoder: # input (48, 128, 256)
     in_channels: 48
-    block_out_channels: [64, 128, 256, 256, 512, 1024, 2048, 2048]
-    downsample_factors: [[1, 2], 2, 2, 2, 2, 2, 2, 2]
-    attn_blocks: [0, 0, 0, 0, 0, 0, 0, 0]
+    block_out_channels: [ 64, 128, 256, 256, 512, 1024, 2048, 2048 ]
+    downsample_factors: [ [ 1, 2 ], 2, 2, 2, 2, 2, 2, 2 ]
+    attn_blocks: [ 0, 0, 0, 0, 0, 0, 0, 0 ]
     dropout: 0.0
 
 ckpt:
-  resume_ckpt_path: ""
-  inference_ckpt_path: /home/qc/ai_server/ai_server/LatentSync/debug/unet/train-2025_03_02-19:22:37/checkpoints/checkpoint-49000.pt
+  resume_ckpt_path: checkpoints/latentsync_syncnet.pt
+  inference_ckpt_path: /home/qc/ai_server/ai_server/LatentSync/debug/syncnet/train-2025_03_12-20:07:31/checkpoints/checkpoint-75000.pt
   save_ckpt_steps: 1000
 
 data:
   train_output_dir: debug/syncnet
   num_val_samples: 500
-  batch_size: 32 # 128
+  batch_size: 48 # 128
   num_workers: 11 # 11
   latent_space: false
   num_frames: 16

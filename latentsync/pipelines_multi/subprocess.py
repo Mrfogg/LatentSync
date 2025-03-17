@@ -4,12 +4,11 @@ import inspect
 import os
 import shutil
 from typing import Callable, List, Optional, Union
-import subprocess
-
+import soundfile as sf
 import numpy as np
 import torch
 import torchvision
-from loguru import logger
+import subprocess
 from diffusers.utils import is_accelerate_available
 from packaging import version
 
@@ -35,8 +34,7 @@ from ..utils.util import read_video, read_audio, write_video
 from ..whisper.audio2feature import Audio2Feature
 import tqdm
 import soundfile as sf
-
-logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
+from loguru import logger
 
 
 class LipsyncPipeline(DiffusionPipeline):
@@ -55,10 +53,12 @@ class LipsyncPipeline(DiffusionPipeline):
                 EulerAncestralDiscreteScheduler,
                 DPMSolverMultistepScheduler,
             ],
-            queue=None
+            in_queue,
+            out_queue,
     ):
         super().__init__()
-        self.queue = queue
+        self.in_queue = in_queue
+        self.out_queue = out_queue
         if hasattr(scheduler.config, "steps_offset") and scheduler.config.steps_offset != 1:
             deprecation_message = (
                 f"The configuration file of this scheduler: {scheduler} is outdated. `steps_offset`"
@@ -312,12 +312,11 @@ class LipsyncPipeline(DiffusionPipeline):
         np.save(cache_path + affine_matrix_file_name, affine_matrices)
         return faces, video_frames, boxes, affine_matrices
 
-    def restore_video(self, faces, video_frames, boxes, affine_matrices):
-        video_frames = video_frames[: faces.shape[0]]
+    def restore_video(self, faces, video_frames, boxes, affine_matrices, start, num_frames: int = 16):
         out_frames = []
         print(f"Restoring {len(faces)} faces...")
         for index, face in enumerate(tqdm.tqdm(faces)):
-            x1, y1, x2, y2 = boxes[index % len(boxes)]
+            x1, y1, x2, y2 = boxes[(index + start * num_frames) % len(boxes)]
             height = int(y2 - y1)
             width = int(x2 - x1)
             face = torchvision.transforms.functional.resize(face, size=(height, width), antialias=True)
@@ -325,37 +324,37 @@ class LipsyncPipeline(DiffusionPipeline):
             face = (face / 2 + 0.5).clamp(0, 1)
             face = (face * 255).to(torch.uint8).cpu().numpy()
             # face = cv2.resize(face, (width, height), interpolation=cv2.INTER_LANCZOS4)
-            out_frame = self.image_processor.restorer.restore_img(video_frames[index % len(video_frames)], face,
-                                                                  affine_matrices[index % len(affine_matrices)])
+            out_frame = self.image_processor.restorer.restore_img(
+                video_frames[(index + start * num_frames) % len(video_frames)],
+                face,
+                affine_matrices[
+                    (index + start * num_frames) % len(affine_matrices)])
             out_frames.append(out_frame)
         return np.stack(out_frames, axis=0)
 
-    def inference(self, image):
-        pass
+    def run(self, rank):
+        while True:
+            task_parameter = self.in_queue.get()
+            if task_parameter is None:
+                break
+            video_path, audio_path, start, end = task_parameter
+            self.inference_batch(video_path, audio_path, start, end, height=256, width=256)
 
     @torch.no_grad()
-    def __call__(
-            self,
-            video_path: str,
-            audio_path: str,
-            video_out_path: str,
-            video_mask_path: str = None,
-            num_frames: int = 16,
-            video_fps: int = 25,
-            audio_sample_rate: int = 16000,
-            height: Optional[int] = None,
-            width: Optional[int] = None,
-            num_inference_steps: int = 20,
-            guidance_scale: float = 1.5,
-            weight_dtype: Optional[torch.dtype] = torch.float16,
-            eta: float = 0.0,
-            mask: str = "fix_mask",
-            generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
-            callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
-            callback_steps: Optional[int] = 1,
-            **kwargs,
-    ):
-
+    def inference_batch(self, video_path, audio_path, start, end,
+                        video_fps: int = 25,
+                        height: Optional[int] = 256,
+                        width: Optional[int] = 256,
+                        num_inference_steps: int = 20,
+                        guidance_scale: float = 1,
+                        num_frames: int = 16,
+                        weight_dtype: Optional[torch.dtype] = torch.float16,
+                        eta: float = 0.0,
+                        mask: str = "fix_mask",
+                        generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
+                        callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
+                        callback_steps: Optional[int] = 1,
+                        ):
         is_train = self.unet.training
         self.unet.eval()
 
@@ -364,10 +363,9 @@ class LipsyncPipeline(DiffusionPipeline):
         device = self._execution_device
         self.image_processor = ImageProcessor(height, mask=mask, device="cuda")
         self.set_progress_bar_config(desc=f"Sample frames: {num_frames}")
-        logger.info(f"affile frames video_path: {video_path}")
+
         faces, original_video_frames, boxes, affine_matrices = self.affine_transform_video(video_path)
-        audio_samples = read_audio(audio_path)
-        logger.info(f"Audio samples: {len(audio_samples)} samples")
+        print("reading audio samples...")
         # 1. Default height and width to unet
         height = height or self.unet.config.sample_size * self.vae_scale_factor
         width = width or self.unet.config.sample_size * self.vae_scale_factor
@@ -392,13 +390,11 @@ class LipsyncPipeline(DiffusionPipeline):
         if self.unet.add_audio_layer:
             whisper_feature = self.audio_encoder.audio2feat(audio_path)
             whisper_chunks = self.audio_encoder.feature2chunks(feature_array=whisper_feature, fps=video_fps)
-
             num_inferences = len(whisper_chunks) // num_frames
         else:
             num_inferences = len(faces) // num_frames
 
         synced_video_frames = []
-        masked_video_frames = []
 
         num_channels_latents = self.vae.config.latent_channels
         # Prepare latent variables
@@ -412,11 +408,8 @@ class LipsyncPipeline(DiffusionPipeline):
             device,
             generator,
         )
-
         print(f"Generating {len(all_latents)} latents...")
-        for i in tqdm.tqdm(range(num_inferences), desc="Doing inference..."):
-            if self.queue is not None:
-                self.queue.send_complete(str(i / num_inferences))  # 发送进度信息
+        for i in tqdm.tqdm(range(start, end), desc="Doing inference..."):
             if self.unet.add_audio_layer:
                 audio_embeds = torch.stack(whisper_chunks[i * num_frames: (i + 1) * num_frames])
                 audio_embeds = audio_embeds.to(device, dtype=weight_dtype)
@@ -492,14 +485,11 @@ class LipsyncPipeline(DiffusionPipeline):
             # masked_video_frames.append(masked_pixel_values)
 
         synced_video_frames = self.restore_video(
-            torch.cat(synced_video_frames), original_video_frames, boxes, affine_matrices
-        )
+            torch.cat(synced_video_frames), original_video_frames, boxes, affine_matrices,
+            start)
         # masked_video_frames = self.restore_video(
         #     torch.cat(masked_video_frames), original_video_frames, boxes, affine_matrices
         # )
-
-        audio_samples_remain_length = int(synced_video_frames.shape[0] / video_fps * audio_sample_rate)
-        audio_samples = audio_samples[:audio_samples_remain_length].cpu().numpy()
 
         if is_train:
             self.unet.train()
@@ -510,13 +500,6 @@ class LipsyncPipeline(DiffusionPipeline):
         os.makedirs(temp_dir, exist_ok=True)
         import uuid
         n = uuid.uuid4().__str__()
-
-        write_video(os.path.join(temp_dir, n + ".mp4"), synced_video_frames, fps=25)
-        # write_video(video_mask_path, masked_video_frames, fps=25)
-
-        sf.write(os.path.join(temp_dir, n + ".wav"), audio_samples, audio_sample_rate)
-
-        command = f"/home/qc/miniconda3/envs/latentsync/bin/ffmpeg -y -loglevel error -nostdin -i {os.path.join(temp_dir, n + '.mp4')} -i {os.path.join(temp_dir, n + '.wav')} -c:v libx264 -c:a aac -q:v 0 -q:a 0 {video_out_path}"
-        conda_env = os.environ.get('CONDA_DEFAULT_ENV')
-        subprocess.run(command, shell=True)
-        logger.info("task success video_path%s, audio_path:%s", video_path, audio_path)
+        video_out_path = os.path.join(temp_dir, n + ".npy")
+        np.save(video_out_path, synced_video_frames)
+        self.out_queue.put((video_out_path, start))

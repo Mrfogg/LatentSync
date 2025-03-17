@@ -5,14 +5,14 @@ import os
 import shutil
 from typing import Callable, List, Optional, Union
 import subprocess
-
+import torch.multiprocessing as mp
 import numpy as np
 import torch
 import torchvision
-from loguru import logger
+from omegaconf import OmegaConf
 from diffusers.utils import is_accelerate_available
 from packaging import version
-
+from diffusers.utils.import_utils import is_xformers_available
 from diffusers.configuration_utils import FrozenDict
 from diffusers.models import AutoencoderKL
 from diffusers.pipeline_utils import DiffusionPipeline
@@ -44,19 +44,11 @@ class LipsyncPipeline(DiffusionPipeline):
 
     def __init__(
             self,
-            vae: AutoencoderKL,
-            audio_encoder: Audio2Feature,
-            unet: UNet3DConditionModel,
-            scheduler: Union[
-                DDIMScheduler,
-                PNDMScheduler,
-                LMSDiscreteScheduler,
-                EulerDiscreteScheduler,
-                EulerAncestralDiscreteScheduler,
-                DPMSolverMultistepScheduler,
-            ],
+            args,
+            config,
             queue=None
     ):
+
         super().__init__()
         self.queue = queue
         if hasattr(scheduler.config, "steps_offset") and scheduler.config.steps_offset != 1:
@@ -291,14 +283,12 @@ class LipsyncPipeline(DiffusionPipeline):
         print(f"Affine transforming {len(video_frames)} faces...")
         i = 0
         for frame in tqdm.tqdm(video_frames):
-            if i == len(video_frames) - len(video_frames) % 16:
-                break
             i += 1
             face, box, affine_matrix = self.image_processor.affine_transform(frame)
             faces.append(face)
             boxes.append(box)
             affine_matrices.append(affine_matrix)
-        video_frames = video_frames[:len(faces)]
+
         faces = torch.stack(faces)
         f = torch.flip(faces, dims=(0,))
         faces = torch.cat((faces, f), dim=0)
@@ -330,90 +320,51 @@ class LipsyncPipeline(DiffusionPipeline):
             out_frames.append(out_frame)
         return np.stack(out_frames, axis=0)
 
-    def inference(self, image):
-        pass
+    def init_model(self, args, config):
+        # Check if the GPU supports float16
+        is_fp16_supported = torch.cuda.is_available() and torch.cuda.get_device_capability()[0] > 7
+        dtype = torch.float16 if is_fp16_supported else torch.float32
+        print(f"Input video path: {args.video_path}")
+        print(f"Input audio path: {args.audio_path}")
+        print(f"Loaded checkpoint path: {args.inference_ckpt_path}")
 
-    @torch.no_grad()
-    def __call__(
-            self,
-            video_path: str,
-            audio_path: str,
-            video_out_path: str,
-            video_mask_path: str = None,
-            num_frames: int = 16,
-            video_fps: int = 25,
-            audio_sample_rate: int = 16000,
-            height: Optional[int] = None,
-            width: Optional[int] = None,
-            num_inference_steps: int = 20,
-            guidance_scale: float = 1.5,
-            weight_dtype: Optional[torch.dtype] = torch.float16,
-            eta: float = 0.0,
-            mask: str = "fix_mask",
-            generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
-            callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
-            callback_steps: Optional[int] = 1,
-            **kwargs,
-    ):
+        self.scheduler = DDIMScheduler.from_pretrained("configs")
 
-        is_train = self.unet.training
-        self.unet.eval()
-
-        # 0. Define call parameters
-        batch_size = 1
-        device = self._execution_device
-        self.image_processor = ImageProcessor(height, mask=mask, device="cuda")
-        self.set_progress_bar_config(desc=f"Sample frames: {num_frames}")
-        logger.info(f"affile frames video_path: {video_path}")
-        faces, original_video_frames, boxes, affine_matrices = self.affine_transform_video(video_path)
-        audio_samples = read_audio(audio_path)
-        logger.info(f"Audio samples: {len(audio_samples)} samples")
-        # 1. Default height and width to unet
-        height = height or self.unet.config.sample_size * self.vae_scale_factor
-        width = width or self.unet.config.sample_size * self.vae_scale_factor
-
-        # 2. Check inputs
-        self.check_inputs(height, width, callback_steps)
-
-        # here `guidance_scale` is defined analog to the guidance weight `w` of equation (2)
-        # of the Imagen paper: https://arxiv.org/pdf/2205.11487.pdf . `guidance_scale = 1`
-        # corresponds to doing no classifier free guidance.
-        do_classifier_free_guidance = guidance_scale > 1.0
-
-        # 3. set timesteps
-        self.scheduler.set_timesteps(num_inference_steps, device=device)
-        timesteps = self.scheduler.timesteps
-
-        # 4. Prepare extra step kwargs.
-        extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
-
-        self.video_fps = video_fps
-
-        if self.unet.add_audio_layer:
-            whisper_feature = self.audio_encoder.audio2feat(audio_path)
-            whisper_chunks = self.audio_encoder.feature2chunks(feature_array=whisper_feature, fps=video_fps)
-
-            num_inferences = len(whisper_chunks) // num_frames
+        if config.model.cross_attention_dim == 768:
+            whisper_model_path = "checkpoints/whisper/small.pt"
+        elif config.model.cross_attention_dim == 384:
+            whisper_model_path = "checkpoints/whisper/tiny.pt"
         else:
-            num_inferences = len(faces) // num_frames
+            raise NotImplementedError("cross_attention_dim must be 768 or 384")
 
-        synced_video_frames = []
-        masked_video_frames = []
+        self.audio_encoder = Audio2Feature(model_path=whisper_model_path, device="cuda",
+                                           num_frames=config.data.num_frames)
 
-        num_channels_latents = self.vae.config.latent_channels
-        # Prepare latent variables
-        all_latents = self.prepare_latents(
-            batch_size,
-            num_frames * num_inferences,
-            num_channels_latents,
-            height,
-            width,
-            weight_dtype,
-            device,
-            generator,
+        self.vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse", torch_dtype=dtype)
+        self.vae.config.scaling_factor = 0.18215
+        self.vae.config.shift_factor = 0
+
+        unet, _ = UNet3DConditionModel.from_pretrained(
+            OmegaConf.to_container(config.model),
+            args.inference_ckpt_path,  # load checkpoint
+            device="cpu",
         )
 
+        self.unet = unet.to(dtype=dtype)
+
+        # set xformers
+        if is_xformers_available():
+            unet.enable_xformers_memory_efficient_attention()
+
+    def process_video(self, faces, whisper_chunks,
+                      all_latents,
+                      num_inferences, do_classifier_free_guidance, num_frames,
+                      device, weight_dtype, height, width, timesteps,
+                      num_inference_steps, guidance_scale,
+                      extra_step_kwargs, rank, result_dict):
         print(f"Generating {len(all_latents)} latents...")
+
+        synced_video_frames = []
         for i in tqdm.tqdm(range(num_inferences), desc="Doing inference..."):
             if self.queue is not None:
                 self.queue.send_complete(str(i / num_inferences))  # 发送进度信息
@@ -439,7 +390,7 @@ class LipsyncPipeline(DiffusionPipeline):
                 width,
                 weight_dtype,
                 device,
-                generator,
+                None,
                 do_classifier_free_guidance,
             )
 
@@ -448,7 +399,7 @@ class LipsyncPipeline(DiffusionPipeline):
                 pixel_values,
                 device,
                 weight_dtype,
-                generator,
+                None,
                 do_classifier_free_guidance,
             )
 
@@ -456,12 +407,11 @@ class LipsyncPipeline(DiffusionPipeline):
             num_warmup_steps = len(timesteps) - num_inference_steps * self.scheduler.order
             with self.progress_bar(total=num_inference_steps) as progress_bar:
                 for j, t in enumerate(timesteps):
-
                     # expand the latents if we are doing classifier free guidance
                     latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+
                     # concat latents, mask, masked_image_latents in the channel dimension
                     latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
-
                     latent_model_input = torch.cat(
                         [latent_model_input, mask_latents, masked_image_latents, image_latents], dim=1
                     )
@@ -480,8 +430,9 @@ class LipsyncPipeline(DiffusionPipeline):
                     # call the callback, if provided
                     if j == len(timesteps) - 1 or ((j + 1) > num_warmup_steps and (j + 1) % self.scheduler.order == 0):
                         progress_bar.update()
-                        if callback is not None and j % callback_steps == 0:
-                            callback(j, t, latents)
+                        if None is not None and j % None == 0:
+                            # callback(j, t, latents)
+                            pass
 
             # Recover the pixel values
             decoded_latents = self.decode_latents(latents)
@@ -490,6 +441,128 @@ class LipsyncPipeline(DiffusionPipeline):
             )
             synced_video_frames.append(decoded_latents)
             # masked_video_frames.append(masked_pixel_values)
+            result_dict[rank] = synced_video_frames
+
+    @torch.no_grad()
+    def __call__(
+            self,
+            video_path: str,
+            audio_path: str,
+            video_out_path: str,
+            video_mask_path: str = None,
+            num_frames: int = 16,
+            video_fps: int = 25,
+            audio_sample_rate: int = 16000,
+            height: Optional[int] = None,
+            width: Optional[int] = None,
+            num_inference_steps: int = 20,
+            guidance_scale: float = 1.5,
+            weight_dtype: Optional[torch.dtype] = torch.float16,
+            eta: float = 0.0,
+            mask: str = "fix_mask",
+            # generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
+            # callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
+            # callback_steps: Optional[int] = 1,
+            # **kwargs,
+    ):
+        is_train = self.unet.training
+        self.unet.eval()
+
+        # 0. Define call parameters
+        batch_size = 1
+        device = self._execution_device
+        self.image_processor = ImageProcessor(height, mask=mask, device="cuda")
+        self.set_progress_bar_config(desc=f"Sample frames: {num_frames}")
+
+        faces, original_video_frames, boxes, affine_matrices = self.affine_transform_video(video_path)
+        audio_samples = read_audio(audio_path)
+        print("reading audio samples...")
+        # 1. Default height and width to unet
+        height = height or self.unet.config.sample_size * self.vae_scale_factor
+        width = width or self.unet.config.sample_size * self.vae_scale_factor
+
+        # 2. Check inputs
+        self.check_inputs(height, width, 1)
+
+        # here `guidance_scale` is defined analog to the guidance weight `w` of equation (2)
+        # of the Imagen paper: https://arxiv.org/pdf/2205.11487.pdf . `guidance_scale = 1`
+        # corresponds to doing no classifier free guidance.
+        do_classifier_free_guidance = guidance_scale > 1.0
+
+        # 3. set timesteps
+        self.scheduler.set_timesteps(num_inference_steps, device=device)
+        timesteps = self.scheduler.timesteps
+
+        # 4. Prepare extra step kwargs.
+        extra_step_kwargs = self.prepare_extra_step_kwargs(None, eta)
+
+        self.video_fps = video_fps
+
+        if self.unet.add_audio_layer:
+            whisper_feature = self.audio_encoder.audio2feat(audio_path)
+            whisper_chunks = self.audio_encoder.feature2chunks(feature_array=whisper_feature, fps=video_fps)
+
+            num_inferences = len(whisper_chunks) // num_frames
+        else:
+            num_inferences = len(faces) // num_frames
+
+        synced_video_frames = []
+        masked_video_frames = []
+
+        num_channels_latents = self.vae.config.latent_channels
+
+        # Prepare latent variables
+        all_latents = self.prepare_latents(
+            batch_size,
+            num_frames * num_inferences,
+            num_channels_latents,
+            height,
+            width,
+            weight_dtype,
+            device,
+            None,
+        )
+        result_dict = mp.Manager().dict()  # 创建一个共享字典
+        processes = []  # 用于存储进程对象
+
+        '''
+            length = len(arr)
+    part_size = length // num_parts  # 每份的基础大小
+    remainder = length % num_parts  # 剩余部分
+
+    result = []
+    start = 0
+
+    for i in range(num_parts):
+        # 计算当前份的结束下标
+        end = start + part_size + (1 if i < remainder else 0)
+        '''
+        num_parts = 4
+        part_size = num_inferences // num_parts  # 每份的基础大小
+        remainder = num_inferences % num_parts  # 剩余部分
+        # 创建并启动多个进程
+        start = 0
+        for i in range(num_parts):
+            end = start + part_size + (1 if i < remainder else 0)
+            p = mp.Process(target=self.process_video,
+                           args=(faces[start * num_frames:end * num_frames],
+                                 whisper_chunks[start * num_frames:end * num_frames],
+                                 all_latents[:, :, start * num_frames:end * num_frames],
+                                 end - start, do_classifier_free_guidance, num_frames,
+                                 device, weight_dtype, height, width, timesteps,
+                                 num_inference_steps, guidance_scale, extra_step_kwargs, i, result_dict))
+            p.start()
+            processes.append(p)
+            start = end
+
+        # 等待所有进程完成
+        for p in processes:
+            p.join()
+
+        synced_video_frames = []
+        # 按进程编号顺序提取结果并存储到列表中
+        for rank in range(num_parts):
+            synced_video_frames.extend(result_dict[rank])
 
         synced_video_frames = self.restore_video(
             torch.cat(synced_video_frames), original_video_frames, boxes, affine_matrices
@@ -518,5 +591,5 @@ class LipsyncPipeline(DiffusionPipeline):
 
         command = f"/home/qc/miniconda3/envs/latentsync/bin/ffmpeg -y -loglevel error -nostdin -i {os.path.join(temp_dir, n + '.mp4')} -i {os.path.join(temp_dir, n + '.wav')} -c:v libx264 -c:a aac -q:v 0 -q:a 0 {video_out_path}"
         conda_env = os.environ.get('CONDA_DEFAULT_ENV')
+        print(f"当前 Conda 环境: {conda_env}")
         subprocess.run(command, shell=True)
-        logger.info("task success video_path%s, audio_path:%s", video_path, audio_path)

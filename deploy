@@ -1,1 +1,1 @@
-	rsync -r -av   ~/workspace/ai/LatentSync -e 'ssh' qc@nb:/home/qc/ai_server/ai_server
+	rsync -r -av   ~/workspace/ai/LatentSync -e 'ssh' qc@nb1:/home/qc/workspace/

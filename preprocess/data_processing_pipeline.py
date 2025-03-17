@@ -28,21 +28,21 @@ from preprocess.remove_incorrect_affined import remove_incorrect_affined_multipr
 def data_processing_pipeline(
     total_num_workers, per_gpu_num_workers, resolution, sync_conf_threshold, temp_dir, input_dir
 ):
-    print("Removing broken videos...")
-    remove_broken_videos_multiprocessing(input_dir, total_num_workers)
+    # print("Removing broken videos...")
+    # remove_broken_videos_multiprocessing(input_dir, total_num_workers)
 
-    print("Resampling FPS hz...")
-    resampled_dir = os.path.join(os.path.dirname(input_dir), "resampled")
-    resample_fps_hz_multiprocessing(input_dir, resampled_dir, total_num_workers)
-
-    print("Detecting shot...")
-    shot_dir = os.path.join(os.path.dirname(input_dir), "shot")
-    detect_shot_multiprocessing(resampled_dir, shot_dir, total_num_workers)
-
-    print("Segmenting videos...")
+    # print("Resampling FPS hz...")
+    # resampled_dir = os.path.join(os.path.dirname(input_dir), "resampled")
+    # resample_fps_hz_multiprocessing(input_dir, resampled_dir, total_num_workers)
+    #
+    # print("Detecting shot...")
+    #shot_dir = os.path.join(os.path.dirname(input_dir), "shot")
+    # detect_shot_multiprocessing(resampled_dir, shot_dir, total_num_workers)
+    #
+    # print("Segmenting videos...")
     segmented_dir = os.path.join(os.path.dirname(input_dir), "segmented")
-    segment_videos_multiprocessing(shot_dir, segmented_dir, total_num_workers)
-
+    # segment_videos_multiprocessing(shot_dir, segmented_dir, total_num_workers)
+    #
     print("Filtering high resolution...")
     high_resolution_dir = os.path.join(os.path.dirname(input_dir), "high_resolution")
     filter_high_resolution_multiprocessing(segmented_dir, high_resolution_dir, resolution, total_num_workers)

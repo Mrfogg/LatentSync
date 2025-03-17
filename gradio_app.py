@@ -1,13 +1,13 @@
 import gradio as gr
 from pathlib import Path
-from scripts.inference_tmp import main
+from scripts.inference_multi import main
 from omegaconf import OmegaConf
 import argparse
 from datetime import datetime
+import torch.multiprocessing as mp
 import os
 
 CONFIG_PATH = Path("configs/unet/second_stage_prod.yaml")
-
 
 def get_model_files(model_dir):
     """Get all model files from the specified directory."""
@@ -197,6 +197,5 @@ if __name__ == "__main__":
     parser.add_argument("--model_dir", type=str, required=True, help="Directory containing UNet model files")
     parser.add_argument("--port", type=int, default=7861, help="Port to run the server on")
     args = parser.parse_args()
-
     demo = create_interface(args.model_dir)
     demo.launch(inbrowser=True, share=False, server_port=args.port, server_name='0.0.0.0')
