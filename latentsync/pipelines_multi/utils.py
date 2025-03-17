@@ -63,7 +63,8 @@ def init_pipeline(in_queue, out_queue, config, args,rank) -> LipsyncPipeline:
         scheduler=scheduler,
         in_queue=in_queue,
         out_queue=out_queue,
-    ).to("cuda:"+str(rank))
+        rank=rank,
+    ).to("cuda:"+str(rank%3))
     if args.seed != -1:
         set_seed(args.seed)
     else:

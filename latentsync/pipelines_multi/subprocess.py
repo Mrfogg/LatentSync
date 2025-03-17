@@ -55,7 +55,9 @@ class LipsyncPipeline(DiffusionPipeline):
             ],
             in_queue,
             out_queue,
+            rank
     ):
+        self.rank = rank
         super().__init__()
         self.in_queue = in_queue
         self.out_queue = out_queue
@@ -272,7 +274,8 @@ class LipsyncPipeline(DiffusionPipeline):
             return None, None, None, None
 
     def affine_transform_video(self, video_path):
-        cache_path = '/data/video_preprocess/' + os.path.basename(video_path) + '/'
+        logger.debug(f"Affine transforming video {self.rank}")
+        cache_path = '/home/qc/data/video_preprocess/' + os.path.basename(video_path) + '/'
         faces_file_name = "faces.pth"
         boxes_file_name = "box.npy"
         affine_matrix_file_name = "affine_matrix.npy"
@@ -282,6 +285,7 @@ class LipsyncPipeline(DiffusionPipeline):
             boxes = np.load(cache_path + boxes_file_name)
             affine_matrices = np.load(cache_path + affine_matrix_file_name)
             video_frames = np.load(cache_path + video_frames_file_name)
+            logger.debug(f"Affine transforming video end {self.rank}")
             return faces, video_frames, boxes, affine_matrices
         os.makedirs(cache_path)
         video_frames = read_video(video_path, use_decord=False)
@@ -338,6 +342,7 @@ class LipsyncPipeline(DiffusionPipeline):
             if task_parameter is None:
                 break
             video_path, audio_path, start, end = task_parameter
+            logger.info(f"inference_batch: {video_path} audio: {audio_path} rank: {rank}")
             self.inference_batch(video_path, audio_path, start, end, height=256, width=256)
 
     @torch.no_grad()
@@ -408,6 +413,7 @@ class LipsyncPipeline(DiffusionPipeline):
             device,
             generator,
         )
+        logger.info(f"starting inference... rank:{self.rank}")
         print(f"Generating {len(all_latents)} latents...")
         for i in tqdm.tqdm(range(start, end), desc="Doing inference..."):
             if self.unet.add_audio_layer:
@@ -483,14 +489,14 @@ class LipsyncPipeline(DiffusionPipeline):
             )
             synced_video_frames.append(decoded_latents)
             # masked_video_frames.append(masked_pixel_values)
-
+        logger.info(f"finished inference... rank:{self.rank}")
         synced_video_frames = self.restore_video(
             torch.cat(synced_video_frames), original_video_frames, boxes, affine_matrices,
             start)
         # masked_video_frames = self.restore_video(
         #     torch.cat(masked_video_frames), original_video_frames, boxes, affine_matrices
         # )
-
+        logger.debug(f"restore_video {len(synced_video_frames)} frames, success ")
         if is_train:
             self.unet.train()
 
@@ -503,3 +509,4 @@ class LipsyncPipeline(DiffusionPipeline):
         video_out_path = os.path.join(temp_dir, n + ".npy")
         np.save(video_out_path, synced_video_frames)
         self.out_queue.put((video_out_path, start))
+        logger.info(f"finish all subprocess... rank:{self.rank}")

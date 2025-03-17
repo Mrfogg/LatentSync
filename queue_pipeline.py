@@ -23,10 +23,10 @@ class Para:
 #         self.rdb.rpush('digital_human_process_result', json.dumps(self.msg))
 
 if __name__ == '__main__':
-    r = redis.Redis(host='localhost', port=6379, db=0, password='qazwsx')
+    r = redis.Redis(host='192.168.1.17', port=6379, db=0, password='qazwsx')
     args = Para()
     args.unet_config_path = "configs/unet/second_stage_prod.yaml"
-    args.inference_ckpt_path = "/data/model_test/checkpoint-25000.pt"
+    args.inference_ckpt_path = "/home/qc/data/model/checkpoint-25000.pt"
     args.seed = 1
     config = OmegaConf.load(args.unet_config_path)
     pm = PipelineMaster(config, args)  #

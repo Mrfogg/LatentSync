@@ -17,7 +17,7 @@ import subprocess
 
 
 def affine_transform_video(video_path, image_processor):
-    cache_path = '/data/video_preprocess/' + os.path.basename(video_path) + '/'
+    cache_path = '/home/qc/data/video_preprocess/' + os.path.basename(video_path) + '/'
     faces_file_name = "faces.pth"
     boxes_file_name = "box.npy"
     affine_matrix_file_name = "affine_matrix.npy"
@@ -58,7 +58,7 @@ def affine_transform_video(video_path, image_processor):
 
 def sub_process(in_queue, out_queue, config, args):
     processes = []
-    for i in range(4):
+    for i in range(3):
         p = mp.Process(target=init_pipeline, args=(in_queue, out_queue, config, args, i))
         processes.append(p)
         p.start()
@@ -100,12 +100,12 @@ class PipelineMaster:
 
     def process_video(self, video_path, audio_path, video_out_path, num_frames=16):
         logger.info(f"Processing video: {video_path} audio: {audio_path}")
-        audio_samples = read_audio(audio_path)
+        # audio_samples = read_audio(audio_path)
         affine_transform_video(video_path, self.image_processor)
         whisper_chunks = self.whisper_feature(audio_path)
         num_inferences = len(whisper_chunks) // num_frames
         if num_inferences > 10:
-            num_parts = 4
+            num_parts = 3
         else:
             num_parts = 1
         part_size = num_inferences // num_parts  # 每份的基础大小
