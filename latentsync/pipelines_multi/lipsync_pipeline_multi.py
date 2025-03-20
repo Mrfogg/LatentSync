@@ -14,7 +14,9 @@ import soundfile as sf
 from loguru import logger
 import uuid
 import subprocess
-gpu_num = 3
+
+gpu_num = 4
+
 
 def affine_transform_video(video_path, image_processor):
     cache_path = '/home/qc/data/video_preprocess/' + os.path.basename(video_path) + '/'
@@ -131,7 +133,7 @@ class PipelineMaster:
         temp_dir = "temp_inf"
         n = uuid.uuid4().__str__()
         gen_video_out_path = os.path.join(temp_dir, n + ".mp4")
-        write_video(gen_video_out_path, out_video_frames,fps=25)
+        write_video(gen_video_out_path, out_video_frames, fps=25)
         command = f"/home/qc/miniconda3/envs/latentsync/bin/ffmpeg -y -loglevel error -nostdin -i {gen_video_out_path} -i {audio_path} -c:v libx264 -c:a aac -q:v 0 -q:a 0 {video_out_path}"
         subprocess.run(command, shell=True)
-        logger.info(f"Processing video:output_video_path {video_out_path}")
+        logger.info(f"Processing video success:output_video_path {video_out_path}")

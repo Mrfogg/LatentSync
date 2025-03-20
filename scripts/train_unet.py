@@ -62,7 +62,6 @@ def main(config):
     local_rank = init_dist()
     global_rank = dist.get_rank()
     num_processes = dist.get_world_size()
-    print(num_processes, "num_processes")
     is_main_process = global_rank == 0
 
     seed = config.run.seed + global_rank
@@ -159,6 +158,7 @@ def main(config):
 
     # Get the training dataset
     train_dataset = UNetDataset(config.data.train_data_dir, config)
+    print(len(train_dataset),"tttt")
     distributed_sampler = DistributedSampler(
         train_dataset,
         num_replicas=num_processes,
@@ -178,7 +178,7 @@ def main(config):
         drop_last=True,
         worker_init_fn=train_dataset.worker_init_fn,
     )
-
+    print(len(train_dataloader))
     # Get the training iteration
     if config.run.max_train_steps == -1:
         assert config.run.max_train_epochs != -1

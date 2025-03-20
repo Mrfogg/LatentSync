@@ -5,7 +5,7 @@ from omegaconf import OmegaConf
 
 from latentsync.models.unet import UNet3DConditionModel
 from latentsync.utils.image_processor import ImageProcessor
-from .subprocess import LipsyncPipeline
+from .sub_process import LipsyncPipelineSubprocess
 from accelerate.utils import set_seed
 
 from latentsync.whisper.audio2feature import Audio2Feature
@@ -26,7 +26,7 @@ def init_audio_encoder():
     return audio_encoder
 
 
-def init_pipeline(in_queue, out_queue, config, args,rank) -> LipsyncPipeline:
+def init_pipeline(in_queue, out_queue, config, args,rank) -> LipsyncPipelineSubprocess:
     is_fp16_supported = torch.cuda.is_available() and torch.cuda.get_device_capability()[0] > 7
     dtype = torch.float16 if is_fp16_supported else torch.float32
 
@@ -56,7 +56,7 @@ def init_pipeline(in_queue, out_queue, config, args,rank) -> LipsyncPipeline:
     # set xformers
     if is_xformers_available():
         unet.enable_xformers_memory_efficient_attention()
-    pipeline = LipsyncPipeline(
+    pipeline = LipsyncPipelineSubprocess(
         vae=vae,
         audio_encoder=audio_encoder,
         unet=unet,
@@ -64,7 +64,7 @@ def init_pipeline(in_queue, out_queue, config, args,rank) -> LipsyncPipeline:
         in_queue=in_queue,
         out_queue=out_queue,
         rank=rank,
-    ).to("cuda:"+str(rank%3))
+    ).to("cuda:"+str(rank%4))
     if args.seed != -1:
         set_seed(args.seed)
     else:

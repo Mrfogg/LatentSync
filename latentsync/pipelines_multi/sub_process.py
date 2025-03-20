@@ -2,13 +2,10 @@
 
 import inspect
 import os
-import shutil
 from typing import Callable, List, Optional, Union
-import soundfile as sf
 import numpy as np
 import torch
 import torchvision
-import subprocess
 from diffusers.utils import is_accelerate_available
 from packaging import version
 
@@ -37,7 +34,7 @@ import soundfile as sf
 from loguru import logger
 
 
-class LipsyncPipeline(DiffusionPipeline):
+class LipsyncPipelineSubprocess(DiffusionPipeline):
     _optional_components = []
 
     def __init__(
@@ -263,19 +260,10 @@ class LipsyncPipeline(DiffusionPipeline):
         images = images.cpu().numpy()
         return images
 
-    def restore_affine_from_disk(self, cache_path):
-        if os.path.exists(cache_path):
-            faces = torch.load(cache_path + "faces.pth")
-            boxes = np.load(cache_path + "box.npy")
-            affine_matrices = np.load(cache_path + "affine_matrix.npy")
-            video_frames = np.load(cache_path + "video_frames.npy")
-            return faces, video_frames, boxes, affine_matrices
-        else:
-            return None, None, None, None
-
     def affine_transform_video(self, video_path):
         logger.debug(f"Affine transforming video {self.rank}")
         cache_path = '/home/qc/data/video_preprocess/' + os.path.basename(video_path) + '/'
+        logger.debug(f"Caching video {cache_path}")
         faces_file_name = "faces.pth"
         boxes_file_name = "box.npy"
         affine_matrix_file_name = "affine_matrix.npy"
