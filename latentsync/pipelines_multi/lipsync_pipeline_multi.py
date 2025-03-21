@@ -38,12 +38,14 @@ def affine_transform_video(video_path, image_processor):
     print(f"Affine transforming {len(video_frames)} faces...")
     i = 0
     for frame in tqdm.tqdm(video_frames):
+        if i == len(video_frames) - len(video_frames) % 16:
+            break
         i += 1
         face, box, affine_matrix = image_processor.affine_transform(frame)
         faces.append(face)
         boxes.append(box)
         affine_matrices.append(affine_matrix)
-
+    video_frames = video_frames[:len(faces)]
     faces = torch.stack(faces)
     f = torch.flip(faces, dims=(0,))
     faces = torch.cat((faces, f), dim=0)
