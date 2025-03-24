@@ -10,7 +10,7 @@ import subprocess
 import json
 from loguru import logger
 from feiying.ai import generate_video_task, query_task
-
+from urllib.parse import urlparse
 TASK_URL = 'http://192.144.152.86/tenantapi/avatar.aiAvatarRecord/lists?page_no=1&page_size=10&user_info=&status=0'
 TOKRN = '69a6575adfbc6ff9c2250928d8aa6634'
 f = open('configs/system/digital_hunman_conf.json')
@@ -27,12 +27,27 @@ import requests
 import os
 
 
-def extract_filename_from_url(url):
-    # 使用字符串分割方法提取文件名
-    parts = url.split('/')
-    filename = parts[-1]  # 获取最后一个部分作为文件名
-    return filename
+def get_filename_from_url(url):
+    """
+    从 URL 中提取文件名，并去掉查询字符串和锚点。
 
+    参数:
+        url (str): 输入的 URL。
+
+    返回:
+        str: 提取的文件名。
+    """
+    # 解析 URL
+    parsed_url = urlparse(url)
+
+    # 获取路径部分
+    path = parsed_url.path
+
+    # 使用 os.path.basename 获取文件名
+    from os.path import basename
+    filename = basename(path)
+
+    return filename
 
 def download_file(url, save_path=".", filename=None):
     """
