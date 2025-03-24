@@ -12,7 +12,7 @@ from loguru import logger
 from feiying.ai import generate_video_task, query_task
 
 TASK_URL = 'http://192.144.152.86/tenantapi/avatar.aiAvatarRecord/lists?page_no=1&page_size=10&user_info=&status=0'
-TOKRN = '1c32b8d1f00f47545dc6ba0e6605c7d0'
+TOKRN = '69a6575adfbc6ff9c2250928d8aa6634'
 f = open('configs/system/digital_hunman_conf.json')
 DHS = json.loads(f.read())
 notify_url = 'http://192.144.152.86/api/avatar.aiAvatarRecord/receiveAiAvatar'
