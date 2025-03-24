@@ -116,6 +116,7 @@ if __name__ == '__main__':
             task_data = requests.get(TASK_URL, headers={'token': TOKRN}).json()
             if task_data['code'] == -1:
                 logger.info(task_data['msg'])
+                pm.close()
                 break
             if task_data.get("data", {}).get("count", 0) == 0:
                 time.sleep(2)
