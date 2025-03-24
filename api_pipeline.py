@@ -113,7 +113,7 @@ def upload_file_to_server(url, file_path, other_params):
 
 sub_companys = ['17737711610', '18037328992', '拿摩万团队-良师', 'kanghualan888',
                 '15838310311', '18639873957', '17737706163',
-                '18838706389', '15629178657', '18595468330', '15638397074','13002090253']
+                '18838706389', '15629178657', '18595468330', '15638397074','13002090253','17516767554']
 audio_out_path_format = '/home/qc/ai_server/ai_server/upload/%s.wav'
 audio_url_format = 'http://82.157.200.241:8080/humanmeta_file/%s.wav'
 
