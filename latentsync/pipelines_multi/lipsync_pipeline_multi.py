@@ -102,6 +102,10 @@ class PipelineMaster:
         latents = latents * self.scheduler.init_noise_sigma
         return latents
 
+    def close(self):
+        for i in range(gpu_num):
+            self.in_queue.put(None)
+        print("ttt")
     def process_video(self, video_path, audio_path, video_out_path, num_frames=16):
         logger.info(f"Processing video: {video_path} audio: {audio_path}")
         # audio_samples = read_audio(audio_path)

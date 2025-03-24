@@ -1,0 +1,80 @@
+{
+  "suhuaren": {
+    "name": "苏华仁短视频",
+    "guidance_scale": 1,
+    "inference_steps": 30,
+    "audio_conf": {
+      "ref_audio": "ssshhhrrr2.MP3",
+      "ref_text": "我们人生很短，人生是单程票。",
+      "speed": 1,
+      "gpt_model": "GPT_weights_v2/SHR3.0.0-e40.ckpt",
+      "sovits_model": "SoVITS_weights_v2/SHR3.0.0_88.pth",
+      "inp_refs": "GPT-SoVITS/output/slicer_opt_shr/shr.mp3_1332429760_1332625600.wav GPT-SoVITS/output/slicer_opt_shr/shr.mp3_3438715520_3438860800.wav GPT-SoVITS/output/slicer_opt_shr/shr.mp3_3427328320_3427478400.wav"
+    }
+  },
+  "kanghualan": {
+    "name": "康华兰",
+    "guidance_scale": 1,
+    "inference_steps": 30,
+    "audio_conf": {
+      "ref_audio": "kanghualan.wav",
+      "speed": 1,
+      "ref_text": "这就是家长朋友的第一门功课，你只有解决它，我要学了。",
+      "gpt_model": "GPT_weights_v2/KHL3.10-e30.ckpt",
+      "sovits_model": "SoVITS_weights_v2/KHL3.10_e44_s29744.pth",
+      "inp_refs": "GPT-SoVITS/output/slicer_opt_khl_new/khl_new.MP3_2533532480_2533669440.wav GPT-SoVITS/output/slicer_opt_khl_new/khl_new.MP3_2531780800_2531930240.wav GPT-SoVITS/output/slicer_opt_khl_new/khl_new.MP3_2522577280_2522744320.wav"
+    }
+  },
+  "liuyuanyin": {
+    "name": "刘圆印",
+    "guidance_scale": 1,
+    "inference_steps": 30,
+    "audio_conf": {
+      "ref_audio": "liuyuanyin.mp3",
+      "ref_text": "肉是肉，我就想告诉你，你的菜是菜，我让菜变成肉。",
+      "speed": 1,
+      "gpt_model": "GPT_weights_v2/LYY2.21-e50.ckpt",
+      "sovits_model": "SoVITS_weights_v2/LYY2.21_e80_s33600.pth",
+      "inp_refs": "GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3703560320_3703731840.wav GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3695984320_3696219840.wav GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3698536000_3699055040.wav"
+    }
+  },
+  "lingkang": {
+    "name": "灵康",
+    "guidance_scale": 1,
+    "inference_steps": 50,
+    "audio_conf": {
+      "ref_audio": "lk.wav",
+      "ref_text": "但是今天是什么社会呢？是，工业化社会。 ",
+      "speed": 1,
+      "gpt_model": "GPT_weights_v2/lingkang2.28-e30.ckpt",
+      "sovits_model": "SoVITS_weights_v2/lingkang2.28_e70_s19110.pth",
+      "inp_refs": "GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3703560320_3703731840.wav GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3695984320_3696219840.wav GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3698536000_3699055040.wav"
+    }
+  },
+  "xuanxianzi": {
+    "name": "玄贤子",
+    "guidance_scale": 1,
+    "inference_steps": 20,
+    "audio_conf": {
+      "ref_audio": "xxz.wav",
+      "ref_text": "它不限时间为什么，它本来就是鸡蛋茶，它不影响它又不是用",
+      "speed": 1,
+      "gpt_model": "GPT_weights_v2/xuanxianzi3.18-e35.ckpt",
+      "sovits_model": "SoVITS_weights_v2/xuanxianzi3.18_e40_s18760.pth",
+      "inp_refs": "GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3703560320_3703731840.wav GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3695984320_3696219840.wav GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3698536000_3699055040.wav"
+    }
+  },
+  "jialiang": {
+    "name": "嘉良",
+    "guidance_scale": 1,
+    "inference_steps": 20,
+    "audio_conf": {
+      "ref_audio": "jl.wav",
+      "ref_text": "那咱重点讲的就是如何共修成为灵魂伴侣。",
+      "speed": 0.95,
+      "gpt_model": "GPT_weights_v2/xxx-e35.ckpt",
+      "sovits_model": "SoVITS_weights_v2/xxx_e40_s4160.pth",
+      "inp_refs": "GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3703560320_3703731840.wav GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3695984320_3696219840.wav GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3698536000_3699055040.wav"
+    }
+  }
+}
