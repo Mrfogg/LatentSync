@@ -114,6 +114,9 @@ if __name__ == '__main__':
         try:
             torch.cuda.empty_cache()
             task_data = requests.get(TASK_URL, headers={'token': TOKRN}).json()
+            if task_data['code'] == -1:
+                logger.info(task_data['msg'])
+                break
             if task_data.get("data", {}).get("count", 0) == 0:
                 time.sleep(2)
                 continue
