@@ -64,7 +64,7 @@ def download_file(url, save_path=".", filename=None):
 
         # 如果没有指定文件名，使用 URL 的最后一部分
         if filename is None:
-            filename = os.path.basename(url)
+            filename = get_filename_from_url(url)
 
         # 构造完整的保存路径
         full_path = os.path.join(save_path, filename)
