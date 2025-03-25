@@ -74,7 +74,7 @@
       "speed": 0.95,
       "gpt_model": "GPT_weights_v2/xxx-e35.ckpt",
       "sovits_model": "SoVITS_weights_v2/xxx_e40_s4160.pth",
-      "inp_refs": "GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3703560320_3703731840.wav GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3695984320_3696219840.wav GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3698536000_3699055040.wav"
+      "inp_refs": "GPT-SoVITS/output/slicer_opt_jialiang/JL_music.MP3_0491282240_0491493120.wav  GPT-SoVITS/output/slicer_opt_jialiang/JL_music.MP3_0492964160_0493133760.wav  GPT-SoVITS/output/slicer_opt_jialiang/JL_music.MP3_0491282240_0491493120.wav"
     }
   }
 }
