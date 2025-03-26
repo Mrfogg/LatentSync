@@ -12,7 +12,7 @@ from loguru import logger
 from feiying.ai import generate_video_task, query_task
 from urllib.parse import urlparse
 TASK_URL = 'http://192.144.152.86/tenantapi/avatar.aiAvatarRecord/lists?page_no=1&page_size=10&user_info=&status=0'
-TOKRN = '69a6575adfbc6ff9c2250928d8aa6634'
+TOKRN = 'b9f206af38f14af286be0bed408c2525'
 f = open('configs/system/digital_hunman_conf.json')
 DHS = json.loads(f.read())
 notify_url = 'http://192.144.152.86/api/avatar.aiAvatarRecord/receiveAiAvatar'
@@ -113,7 +113,7 @@ def upload_file_to_server(url, file_path, other_params):
 
 sub_companys = ['17737711610', '18037328992', '拿摩万团队-良师', 'kanghualan888',
                 '15838310311', '18639873957', '17737706163',
-                '18838706389', '15629178657', '18595468330', '15638397074','13002090253','17516767554']
+                '18838706389', '15629178657', '18595468330', '15638397074','17516767554']
 audio_out_path_format = '/home/qc/ai_server/ai_server/upload/%s.wav'
 audio_url_format = 'http://82.157.200.241:8080/humanmeta_file/%s.wav'
 

@@ -23,7 +23,6 @@ def affine_transform_video(video_path, image_processor):
     faces_file_name = "faces.pth"
     boxes_file_name = "box.npy"
     affine_matrix_file_name = "affine_matrix.npy"
-    video_frames_file_name = "video_frames.npy"
     video_frames = read_video(video_path, use_decord=False)
 
     if os.path.exists(cache_path):

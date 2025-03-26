@@ -69,12 +69,12 @@
     "guidance_scale": 1,
     "inference_steps": 20,
     "audio_conf": {
-      "ref_audio": "jl.wav",
-      "ref_text": "那咱重点讲的就是如何共修成为灵魂伴侣。",
+      "ref_audio": "JL.MP3",
+      "ref_text": "大商，他们除了把企业做的很好之外，他们开始向更深的层度。",
       "speed": 0.95,
-      "gpt_model": "GPT_weights_v2/xxx-e35.ckpt",
-      "sovits_model": "SoVITS_weights_v2/xxx_e40_s4160.pth",
-      "inp_refs": "GPT-SoVITS/output/slicer_opt_jialiang/JL_music.MP3_0491282240_0491493120.wav  GPT-SoVITS/output/slicer_opt_jialiang/JL_music.MP3_0492964160_0493133760.wav  GPT-SoVITS/output/slicer_opt_jialiang/JL_music.MP3_0491282240_0491493120.wav"
+      "gpt_model": "GPT_weights_v2/jialiang3.24-e40.ckpt",
+      "sovits_model": "SoVITS_weights_v2/jialiang3.24_e68_s11016.pth",
+      "inp_refs": "/home/qc/data/参考音频/jialiang/JL_music.MP3_0835585280_0835776000.wav /home/qc/data/参考音频/jialiang/JL_music.MP3_0835776000_0835840640.wav  /home/qc/data/参考音频/jialiang/JL_music.MP3_0837095040_0837224640.wav /home/qc/data/参考音频/jialiang/JL_music.MP3_0837224640_0837434560.wav /home/qc/data/参考音频/jialiang/JL_music.MP3_0837434560_0837525120.wav /home/qc/data/参考音频/jialiang/JL_music.MP3_0837569600_0837753280.wav /home/qc/data/参考音频/jialiang/JL_music.MP3_0837783680_0837940480.wav"
     }
   }
 }
