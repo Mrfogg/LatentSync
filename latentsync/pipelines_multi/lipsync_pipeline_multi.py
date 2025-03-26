@@ -24,14 +24,16 @@ def affine_transform_video(video_path, image_processor):
     boxes_file_name = "box.npy"
     affine_matrix_file_name = "affine_matrix.npy"
     video_frames_file_name = "video_frames.npy"
+    video_frames = read_video(video_path, use_decord=False)
+
     if os.path.exists(cache_path):
         faces = torch.load(cache_path + faces_file_name)
         boxes = np.load(cache_path + boxes_file_name)
         affine_matrices = np.load(cache_path + affine_matrix_file_name)
-        video_frames = np.load(cache_path + video_frames_file_name)
+        video_frames = video_frames[:len(faces)//2]
+        video_frames = np.concatenate((video_frames, video_frames[::-1]))
         return faces, video_frames, boxes, affine_matrices
     os.makedirs(cache_path)
-    video_frames = read_video(video_path, use_decord=False)
     faces = []
     boxes = []
     affine_matrices = []
@@ -45,6 +47,7 @@ def affine_transform_video(video_path, image_processor):
         faces.append(face)
         boxes.append(box)
         affine_matrices.append(affine_matrix)
+
     video_frames = video_frames[:len(faces)]
     faces = torch.stack(faces)
     f = torch.flip(faces, dims=(0,))
@@ -54,7 +57,6 @@ def affine_transform_video(video_path, image_processor):
     boxes = np.concatenate((boxes, boxes[::(-1)]))
     video_frames = np.concatenate((video_frames, video_frames[::-1]))
     affine_matrices = np.concatenate((affine_matrices, affine_matrices[::-1]))
-    np.save(cache_path + video_frames_file_name, video_frames)
     np.save(cache_path + boxes_file_name, boxes)
     np.save(cache_path + affine_matrix_file_name, affine_matrices)
     return faces, video_frames, boxes, affine_matrices
@@ -105,7 +107,6 @@ class PipelineMaster:
     def close(self):
         for i in range(gpu_num):
             self.in_queue.put(None)
-        print("ttt")
     def process_video(self, video_path, audio_path, video_out_path, num_frames=16):
         logger.info(f"Processing video: {video_path} audio: {audio_path}")
         # audio_samples = read_audio(audio_path)
