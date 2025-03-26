@@ -81,6 +81,9 @@ class PipelineMaster:
         self.out_queue = Queue()
         self.processes = sub_process(self.in_queue, self.out_queue, config, args)
 
+    def join(self):
+        for p in self.processes:
+            p.join()
     def whisper_feature(self, audio_path):
         whisper_feature = self.audio_encoder.audio2feat(audio_path)
         whisper_chunks = self.audio_encoder.feature2chunks(feature_array=whisper_feature, fps=25)
@@ -106,6 +109,7 @@ class PipelineMaster:
     def close(self):
         for i in range(gpu_num):
             self.in_queue.put(None)
+        self.join()
     def process_video(self, video_path, audio_path, video_out_path, num_frames=16):
         logger.info(f"Processing video: {video_path} audio: {audio_path}")
         # audio_samples = read_audio(audio_path)

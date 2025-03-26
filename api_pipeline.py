@@ -210,8 +210,8 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             pm.close()
             logger.info("数字人系统关闭")
+            break
 
         except Exception as e:
-            res = upload_file_to_server(notify_url, "",
-                                        {'taskid': task.get('task_id'), 'errcode': 500, 'status': 1})
             logger.error(e)
+            break
