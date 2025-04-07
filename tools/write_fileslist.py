@@ -34,12 +34,12 @@ def process_input_dir(fileslist_path, input_dir):
 
 
 if __name__ == "__main__":
-    fileslist_path = "/home/qc/ai_server/ai_server/LatentSync/fileslist/val.txt"
+    fileslist_path = "/home/qc/workspace/LatentSync/fileslist/val.txt"
 
     write_fileslist(fileslist_path)
-    process_input_dir(fileslist_path, "/data/high_visual_quality/val")
+    process_input_dir(fileslist_path, "/media/qc/1/high_visual_quality/val")
 
-    fileslist_path = "/home/qc/ai_server/ai_server/LatentSync/fileslist/train.txt"
+    fileslist_path = "/home/qc/workspace/LatentSync/fileslist/train.txt"
 
     write_fileslist(fileslist_path)
-    process_input_dir(fileslist_path, "/data/high_visual_quality/train")
+    process_input_dir(fileslist_path, "/media/qc/1/high_visual_quality/train")

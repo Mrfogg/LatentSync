@@ -5,17 +5,22 @@ import uuid
 import torch
 from latentsync.pipelines_multi.lipsync_pipeline_multi import PipelineMaster
 from dataclasses import dataclass
-import requests
 import subprocess
 import json
 from loguru import logger
-from feiying.ai import generate_video_task, query_task
 from urllib.parse import urlparse
-TASK_URL = 'http://192.144.152.86/tenantapi/avatar.aiAvatarRecord/lists?page_no=1&page_size=10&user_info=&status=0'
-TOKRN = 'b9f206af38f14af286be0bed408c2525'
+import signal
+import os
+
+config_file_path = 'configs/system/digital_hunman_conf.json'
+if os.environ['dh_env'] == 'test':
+    config_file_path = 'configs/system/digital_hunman_conf_test.json'
+print(config_file_path)
 f = open('configs/system/digital_hunman_conf.json')
 DHS = json.loads(f.read())
-notify_url = 'http://192.144.152.86/api/avatar.aiAvatarRecord/receiveAiAvatar'
+notify_url = DHS.get('notify_url')
+TOKEN = DHS.get('TOKEN')
+TASK_URL = DHS.get('task_url')
 
 
 @dataclass
@@ -48,6 +53,7 @@ def get_filename_from_url(url):
     filename = basename(path)
 
     return filename
+
 
 def download_file(url, save_path=".", filename=None):
     """
@@ -111,24 +117,32 @@ def upload_file_to_server(url, file_path, other_params):
     return response.json()  # 假设服务器返回的是 JSON 格式
 
 
-sub_companys = ['17737711610', '18037328992', '拿摩万团队-良师', 'kanghualan888',
-                '15838310311', '18639873957', '17737706163',
-                '18838706389', '15629178657', '18595468330', '15638397074','17516767554']
 audio_out_path_format = '/home/qc/ai_server/ai_server/upload/%s.wav'
 audio_url_format = 'http://82.157.200.241:8080/humanmeta_file/%s.wav'
 
+shutdown_requested = False
+
+
+def handle_sigterm(signum, frame):
+    global shutdown_requested
+    print(f"Received signal {signum} ({signal.Signals(signum).name}). Requesting shutdown...")
+    shutdown_requested = True  # 设置标志变量
+
+
 if __name__ == '__main__':
+    signal.signal(signal.SIGTERM, handle_sigterm)
     args = Para()
-    args.unet_config_path = "configs/unet/second_stage_prod.yaml"
-    args.inference_ckpt_path = "/home/qc/data/model/checkpoint-31000.pt"
+    args.unet_config_path = "configs/unet/stage2_efficient.yaml"
+    args.inference_ckpt_path = "checkpoints/checkpoints-4-5.pt"
     args.seed = 1
     config = OmegaConf.load(args.unet_config_path)
     pm = PipelineMaster(config, args)  #
     logger.info("数字人系统启动")
-    while True:
+    while True and not shutdown_requested:
         try:
             torch.cuda.empty_cache()
-            task_data = requests.get(TASK_URL, headers={'token': TOKRN}).json()
+            raw_data = requests.get(TASK_URL, headers={'token': TOKEN})
+            task_data = raw_data.json()
             if task_data['code'] == -1:
                 logger.info(task_data['msg'])
                 pm.close()
@@ -137,9 +151,11 @@ if __name__ == '__main__':
                 time.sleep(2)
                 continue
             lists = task_data.get("data", {}).get("lists", [])
-            task = lists[::-1][0]
+            task = lists[-1]
+            if task.get('mode') != '普通模式':
+                continue
+            dh = DHS[task.get('video', {}).get('voice_name')]
             if task.get('content') != "":  # 文本合成
-                dh = DHS[task.get('video', {}).get('voice_name')]
                 audio_conf = dh.get('audio_conf')
                 uid = uuid.uuid4().__str__()
                 audio_output_path = audio_out_path_format % uid
@@ -158,54 +174,24 @@ if __name__ == '__main__':
                     cwd=GPT_SOVotts_dir  # 指定工作目录
                 )
                 if status.returncode == 0:
-                    if task.get('account') in sub_companys:
-                        job_id = generate_video_task(task.get('video').get('video_url'), audio_url_format % uid)
-                        while True:
-                            time.sleep(10)  # 一直等待
-                            video_url, status = query_task(job_id)
-                            if status == 3:  # 作品完成
-                                fy_video_path = download_file(video_url, '/data/tmp')
-                                res = upload_file_to_server(notify_url, fy_video_path,
-                                                            {'taskid': task.get('task_id'), 'errcode': 0,
-                                                             'status': 1})
-                                break
-                            elif status == 4:
-                                res = upload_file_to_server(notify_url, "",
-                                                            {'taskid': task.get('task_id'), 'errcode': 500,
-                                                             'status': 1})
-                                break
-                    else:
-                        full_path = download_file(task.get('video').get('video_url'), f'/data/tmp')
-                        video_output_path = f'/data/tmp/{uid}.mp4'
-                        pm.process_video(full_path, audio_output_path, video_output_path)
-                        res = upload_file_to_server(notify_url, video_output_path,
-                                                    {'taskid': task.get('task_id'), 'errcode': 0, 'status': 1})
-                else:
-                    pass
-            if task.get('voice_url', '') != '':
-                if task.get('account') in sub_companys:
-                    job_id = generate_video_task(task.get('video').get('video_url'), task.get('voice_url'))
-                    while True:
-                        time.sleep(10)  # 一直等待
-                        video_url, status = query_task(job_id)
-                        if status == 3:  # 作品完成
-                            fy_video_path = download_file(video_url, '/data/tmp')
-                            res = upload_file_to_server(notify_url, fy_video_path,
-                                                        {'taskid': task.get('task_id'), 'errcode': 0, 'status': 1})
-                            break
-                        elif status == 4:
-                            res = upload_file_to_server(notify_url, "",
-                                                        {'taskid': task.get('task_id'), 'errcode': 500,
-                                                         'status': 1})
-                            break
-                else:
-                    voice_path = download_file(task.get('voice_url'), f'/data/tmp')
                     full_path = download_file(task.get('video').get('video_url'), f'/data/tmp')
-                    uid = uuid.uuid4().__str__()
                     video_output_path = f'/data/tmp/{uid}.mp4'
-                    pm.process_video(full_path, voice_path, video_output_path)
+                    pm.process_video(full_path, audio_output_path, video_output_path,
+                                     guidance_scale=dh.get('guidance_scale'))
                     res = upload_file_to_server(notify_url, video_output_path,
                                                 {'taskid': task.get('task_id'), 'errcode': 0, 'status': 1})
+                    logger.info(res)
+                else:
+                    res = upload_file_to_server(notify_url, "",
+                                                {'taskid': task.get('task_id'), 'errcode': 0, 'status': 1})
+            if task.get('voice_url', '') != '':
+                voice_path = download_file(task.get('voice_url'), f'/data/tmp')
+                full_path = download_file(task.get('video').get('video_url'), f'/data/tmp')
+                uid = uuid.uuid4().__str__()
+                video_output_path = f'/data/tmp/{uid}.mp4'
+                pm.process_video(full_path, voice_path, video_output_path, guidance_scale=dh.get('guidance_scale'))
+                res = upload_file_to_server(notify_url, video_output_path,
+                                            {'taskid': task.get('task_id'), 'errcode': 0, 'status': 1})
 
         except KeyboardInterrupt:
             pm.close()
@@ -214,4 +200,7 @@ if __name__ == '__main__':
 
         except Exception as e:
             logger.error(e)
+            pm.close()
             break
+    pm.close()
+    logger.info("数字人系统关闭")

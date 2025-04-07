@@ -14,7 +14,7 @@ model:
 
 ckpt:
   resume_ckpt_path: checkpoints/latentsync_syncnet.pt
-  inference_ckpt_path: /home/qc/ai_server/ai_server/LatentSync/debug/syncnet/train-2025_03_12-20:07:31/checkpoints/checkpoint-75000.pt
+  inference_ckpt_path: ""
   save_ckpt_steps: 1000
 
 data:
@@ -25,12 +25,12 @@ data:
   latent_space: false
   num_frames: 16
   resolution: 256
-  train_fileslist: /home/qc/ai_server/ai_server/LatentSync/fileslist/train.txt
-  train_data_dir: /data/high_visual_quality/train
-  val_fileslist: /home/qc/ai_server/ai_server/LatentSync/fileslist/val.txt
-  val_data_dir: /data/high_visual_quality/val
-  audio_cache_dir: /home/qc/ai_server/ai_server/LatentSync/audio_cache/mel_new
-  audio_mel_cache_dir: /home/qc/ai_server/ai_server/LatentSync/audio_cache/mel_new
+  train_fileslist: /home/qc/workspace/LatentSync/fileslist/train.txt
+  train_data_dir: /media/qc/1/high_visual_quality/train
+  val_fileslist: /home/qc/workspace/LatentSync/fileslist/val.txt
+  val_data_dir: /media/qc/1/high_visual_quality/val
+  audio_cache_dir: /home/qc/workspace/LatentSync/audio_cache/mel_new
+  audio_mel_cache_dir: /home/qc/workspace/LatentSync/audio_cache/mel_new
   lower_half: true
   audio_sample_rate: 16000
   video_fps: 25

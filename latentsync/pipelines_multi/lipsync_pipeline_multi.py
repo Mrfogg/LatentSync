@@ -139,7 +139,9 @@ class PipelineMaster:
             logger.info(f"save sub video {result[0]} shape:{sub_video.shape}")
             result_sub_videos.append((sub_video, result[1]))
         result_sub_videos = sorted(result_sub_videos, key=lambda x: x[1])
+        logger.info(f"sort concatenate videos {result_sub_videos}")
         out_video_frames = np.concatenate([sub_video[0] for sub_video in result_sub_videos])
+        logger.info(f"sort concatenate videos {result_sub_videos}")
         temp_dir = "temp_inf"
         n = uuid.uuid4().__str__()
         gen_video_out_path = os.path.join(temp_dir, n + ".mp4")

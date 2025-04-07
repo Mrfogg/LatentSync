@@ -1,7 +1,7 @@
 {
-  "task_url": "https://suibai.vip/tenantapi/avatar.aiAvatarRecord/lists?page_no=1&page_size=100&user_info=&status=0",
-  "TOKEN": "9ed86c716c2e948098b247b01a93190f",
-  "notify_url": "https://suibai.vip/api/avatar.aiAvatarRecord/receiveAiAvatar",
+  "task_url": "https://192.144.152.86/tenantapi/avatar.aiAvatarRecord/lists?page_no=1&page_size=100&user_info=&status=0",
+  "TOKRN": "074c3cc69b6ba12737f9ac80d3e2ab3b",
+  "notify_url": "https://192.144.152.86/api/avatar.aiAvatarRecord/receiveAiAvatar",
   "suhuaren": {
     "name": "苏华仁短视频",
     "guidance_scale": 2,

@@ -1,11 +1,10 @@
 import requests
-import redis
 
 token = 'xUSdpIaKdgaAUQzh'
 
 REQ_URL = 'https://hfw-api.lingverse.co/api/v1/hifly/task/create'
 STATUS_URL = 'https://hfw-api.lingverse.co/api/v1/hifly/task/inspect'
-r = redis.Redis(host='localhost', port=6379, db=0, password='qazwsx')
+# r = redis.Redis(host='localhost', port=6379, db=0, password='qazwsx')
 
 
 def generate_video_task(video_url, audio_url):

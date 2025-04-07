@@ -17,10 +17,22 @@ from omegaconf import OmegaConf
 from latentsync.pipelines_multi.lipsync_pipeline_multi import PipelineMaster
 
 pm = None
-def main(config, args):
+def main(config, args, frame_callback=None):
     global pm
     import time
     if pm is None:
         pm = PipelineMaster(config, args) #
     pm.process_video(video_path=args.video_path,
                      audio_path=args.audio_path,video_out_path=args.video_out_path)
+
+    # for batch_idx, batch in enumerate(dataloader):
+    #     # ... 处理批次 ...
+    #
+    #     # 处理完每一帧后调用回调函数
+    #     if frame_callback is not None:
+    #         for frame in processed_frames:
+    #             frame_callback(frame)
+    #
+    #     # ... 其他处理 ...
+    #
+    # return result
