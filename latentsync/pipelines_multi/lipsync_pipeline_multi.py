@@ -29,8 +29,9 @@ def affine_transform_video(video_path, image_processor):
         faces = torch.load(cache_path + faces_file_name)
         boxes = np.load(cache_path + boxes_file_name)
         affine_matrices = np.load(cache_path + affine_matrix_file_name)
-        video_frames = video_frames[:len(faces)//2]
+        video_frames = video_frames[:len(faces) // 2]
         video_frames = np.concatenate((video_frames, video_frames[::-1]))
+
         return faces, video_frames, boxes, affine_matrices
     os.makedirs(cache_path)
     faces = []
@@ -84,6 +85,7 @@ class PipelineMaster:
     def join(self):
         for p in self.processes:
             p.join()
+
     def whisper_feature(self, audio_path):
         whisper_feature = self.audio_encoder.audio2feat(audio_path)
         whisper_chunks = self.audio_encoder.feature2chunks(feature_array=whisper_feature, fps=25)
@@ -110,7 +112,8 @@ class PipelineMaster:
         for i in range(gpu_num):
             self.in_queue.put(None)
         self.join()
-    def process_video(self, video_path, audio_path, video_out_path, num_frames=16):
+
+    def process_video(self, video_path, audio_path, video_out_path, num_frames=16, guidance_scale=1):
         logger.info(f"Processing video: {video_path} audio: {audio_path}")
         # audio_samples = read_audio(audio_path)
         affine_transform_video(video_path, self.image_processor)
@@ -128,7 +131,7 @@ class PipelineMaster:
         for i in range(num_parts):
             end = start + part_size + (1 if i < remainder else 0)
             logger.info(f"send data to subprocess {i}")
-            self.in_queue.put((video_path, audio_path, start, end))
+            self.in_queue.put((video_path, audio_path, start, end, guidance_scale))
             # 保存当前份的下标范围和子数组
             # 更新起始下标
             start = end
@@ -137,11 +140,10 @@ class PipelineMaster:
             result = self.out_queue.get()
             sub_video = np.load(result[0])
             logger.info(f"save sub video {result[0]} shape:{sub_video.shape}")
+            os.remove(result[0])
             result_sub_videos.append((sub_video, result[1]))
         result_sub_videos = sorted(result_sub_videos, key=lambda x: x[1])
-        logger.info(f"sort concatenate videos {result_sub_videos}")
         out_video_frames = np.concatenate([sub_video[0] for sub_video in result_sub_videos])
-        logger.info(f"sort concatenate videos {result_sub_videos}")
         temp_dir = "temp_inf"
         n = uuid.uuid4().__str__()
         gen_video_out_path = os.path.join(temp_dir, n + ".mp4")

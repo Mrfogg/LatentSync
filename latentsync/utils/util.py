@@ -46,18 +46,11 @@ def read_json(filepath: str):
 
 def read_video(video_path: str, change_fps=True, use_decord=True):
     if change_fps:
-
-        temp_dir = "/tmp/" + uuid.uuid4().__str__()
-        if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
-        os.makedirs(temp_dir, exist_ok=True)
         command = (
-            f"ffmpeg -loglevel error -y -nostdin -i {video_path} -r 25 -crf 18 {os.path.join(temp_dir, 'video.mp4')}"
+            f"ffmpeg -loglevel error -y -nostdin -i {video_path} -r 25 -crf 18 {video_path}"
         )
         subprocess.run(command, shell=True)
-        target_video_path = os.path.join(temp_dir, "video.mp4")
-    else:
-        target_video_path = video_path
+    target_video_path = video_path
 
     if use_decord:
         return read_video_decord(target_video_path)
@@ -151,7 +144,7 @@ def make_audio_window(audio_embeddings: torch.Tensor, window_size: int):
     audio_window = []
     end_idx = audio_embeddings.shape[1] - window_size + 1
     for i in range(end_idx):
-        audio_window.append(audio_embeddings[:, i : i + window_size, :])
+        audio_window.append(audio_embeddings[:, i: i + window_size, :])
     audio_window = torch.stack(audio_window)
     audio_window = rearrange(audio_window, "f b w d -> b f w d")
     return audio_window
@@ -241,10 +234,10 @@ def reversed_forward(ddim_scheduler, pred_noise, timesteps, x_t):
 
 
 def next_step(
-    model_output: Union[torch.FloatTensor, np.ndarray],
-    timestep: int,
-    sample: Union[torch.FloatTensor, np.ndarray],
-    ddim_scheduler,
+        model_output: Union[torch.FloatTensor, np.ndarray],
+        timestep: int,
+        sample: Union[torch.FloatTensor, np.ndarray],
+        ddim_scheduler,
 ):
     timestep, next_timestep = (
         min(timestep - ddim_scheduler.config.num_train_timesteps // ddim_scheduler.num_inference_steps, 999),
@@ -253,9 +246,9 @@ def next_step(
     alpha_prod_t = ddim_scheduler.alphas_cumprod[timestep] if timestep >= 0 else ddim_scheduler.final_alpha_cumprod
     alpha_prod_t_next = ddim_scheduler.alphas_cumprod[next_timestep]
     beta_prod_t = 1 - alpha_prod_t
-    next_original_sample = (sample - beta_prod_t**0.5 * model_output) / alpha_prod_t**0.5
+    next_original_sample = (sample - beta_prod_t ** 0.5 * model_output) / alpha_prod_t ** 0.5
     next_sample_direction = (1 - alpha_prod_t_next) ** 0.5 * model_output
-    next_sample = alpha_prod_t_next**0.5 * next_original_sample + next_sample_direction
+    next_sample = alpha_prod_t_next ** 0.5 * next_original_sample + next_sample_direction
     return next_sample
 
 

@@ -14,7 +14,7 @@ model:
 
 ckpt:
   resume_ckpt_path: checkpoints/latentsync_syncnet.pt
-  inference_ckpt_path: ""
+  inference_ckpt_path: "debug/syncnet/train-2025_04_07-18:03:05/checkpoints/checkpoint-92000.pt"
   save_ckpt_steps: 1000
 
 data:

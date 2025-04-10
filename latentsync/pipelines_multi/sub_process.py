@@ -265,7 +265,7 @@ class LipsyncPipelineSubprocess(DiffusionPipeline):
         faces_file_name = "faces.pth"
         boxes_file_name = "box.npy"
         affine_matrix_file_name = "affine_matrix.npy"
-        video_frames = read_video(video_path, use_decord=False)
+        video_frames = read_video(video_path, use_decord=False, change_fps=False)
 
         if os.path.exists(cache_path):
             faces = torch.load(cache_path + faces_file_name)
@@ -327,9 +327,10 @@ class LipsyncPipelineSubprocess(DiffusionPipeline):
             task_parameter = self.in_queue.get()
             if task_parameter is None:
                 break
-            video_path, audio_path, start, end = task_parameter
+            video_path, audio_path, start, end, guidance_scale = task_parameter
             logger.info(f"inference_batch: {video_path} audio: {audio_path} rank: {rank}")
-            self.inference_batch(video_path, audio_path, start, end, height=256, width=256)
+            self.inference_batch(video_path, audio_path, start, end, height=256, width=256,
+                                 guidance_scale=guidance_scale)
 
     @torch.no_grad()
     def inference_batch(self, video_path, audio_path, start, end,
@@ -368,7 +369,7 @@ class LipsyncPipelineSubprocess(DiffusionPipeline):
         # of the Imagen paper: https://arxiv.org/pdf/2205.11487.pdf . `guidance_scale = 1`
         # corresponds to doing no classifier free guidance.
         do_classifier_free_guidance = guidance_scale > 1.0
-        print(guidance_scale,"guidance_scale")
+        print(guidance_scale, "guidance_scale")
         # 3. set timesteps
         self.scheduler.set_timesteps(num_inference_steps, device=device)
         timesteps = self.scheduler.timesteps
@@ -476,12 +477,11 @@ class LipsyncPipelineSubprocess(DiffusionPipeline):
             synced_video_frames.append(decoded_latents)
             # masked_video_frames.append(masked_pixel_values)
         logger.info(f"finished inference... rank:{self.rank}")
+
         synced_video_frames = self.restore_video(
             torch.cat(synced_video_frames), original_video_frames, boxes, affine_matrices,
             start)
-        # masked_video_frames = self.restore_video(
-        #     torch.cat(masked_video_frames), original_video_frames, boxes, affine_matrices
-        # )
+
         logger.debug(f"restore_video {len(synced_video_frames)} frames, success ")
         if is_train:
             self.unet.train()

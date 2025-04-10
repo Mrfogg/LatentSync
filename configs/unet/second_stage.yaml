@@ -1,13 +1,13 @@
 data:
   syncnet_config_path: configs/syncnet/syncnet_16_pixel.yaml
   train_output_dir: debug/unet
-  train_fileslist: /home/qc/ai_server/ai_server/LatentSync/fileslist/train.txt
+  train_fileslist: /home/qc/workspace/LatentSync/fileslist/train.txt
   train_data_dir: /data/high_visual_quality
-  audio_embeds_cache_dir: /home/qc/ai_server/ai_server/LatentSync/audio_cache/whisper_new
-  audio_mel_cache_dir: /home/qc/ai_server/ai_server/LatentSync/audio_cache/mel_new
+  audio_embeds_cache_dir: /home/qc/workspace/LatentSync/audio_cache/whisper_new
+  audio_mel_cache_dir: /home/qc/workspace/LatentSync/audio_cache/mel_new
   
-  val_video_path: assets/demo1_video.mp4
-  val_audio_path: assets/demo1_audio.wav
+  val_video_path: assets/苏华仁循环30秒.mp4
+  val_audio_path: assets/audio.wav
   batch_size: 1 # 8
   num_workers: 11 # 11
   num_frames: 16
@@ -17,7 +17,7 @@ data:
   video_fps: 25
 
 ckpt:
-  resume_ckpt_path: /data/model_test/checkpoint-25000.pt
+  resume_ckpt_path: debug/unet/train-2025_04_09-18:29:43/checkpoints/checkpoint-55000.pt
   save_ckpt_steps: 1000
 
 run:

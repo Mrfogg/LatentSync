@@ -1,5 +1,5 @@
 {
-  "task_url": "https://192.144.152.86/tenantapi/avatar.aiAvatarRecord/lists?page_no=1&page_size=100&user_info=&status=0",
+  "task_url": "https://192.144.152.86/tenantapi/avatar.aiAvatarRecord/lists?page_no=1&page_size=100&user_info=&status=0&start_time=&end_time=",
   "TOKRN": "074c3cc69b6ba12737f9ac80d3e2ab3b",
   "notify_url": "https://192.144.152.86/api/avatar.aiAvatarRecord/receiveAiAvatar",
   "suhuaren": {

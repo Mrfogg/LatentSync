@@ -1,14 +1,14 @@
 data:
   syncnet_config_path: configs/syncnet/syncnet_16_pixel.yaml
   train_output_dir: debug/unet
-  train_fileslist: /home/qc/ai_server/ai_server/LatentSync/fileslist/train.txt
-  train_data_dir: /data/high_visual_quality/train
-  audio_embeds_cache_dir: /home/qc/ai_server/ai_server/LatentSync/audio_cache/whisper_new
-  audio_mel_cache_dir: /home/qc/ai_server/ai_server/LatentSync/audio_cache/mel_new
+  train_fileslist: /home/qc/workspace/LatentSync/fileslist/train.txt
+  train_data_dir: /data/high_visual_quality
+  audio_embeds_cache_dir: /home/qc/workspace/LatentSync/audio_cache/whisper_new
+  audio_mel_cache_dir: /home/qc/workspace/LatentSync/audio_cache/mel_new
 
-  val_video_path: /home/qc/ai_server/ai_server/upload/20250304195055e36516680.mp4
-  val_audio_path:  /home/qc/ai_server/ai_server/upload/uJqiJIK1CHl2pKS6nbCjhDGTwNG9qI1K3kwq.mp3
-  batch_size: 5 # 8
+  val_video_path: assets/demo1_video.mp4
+  val_audio_path: assets/demo1_audio.wav
+  batch_size: 4 # 8
   num_workers: 4 # 11
   num_frames: 16
   resolution: 256
@@ -17,7 +17,7 @@ data:
   video_fps: 25
 
 ckpt:
-  resume_ckpt_path: /home/qc/ai_server/ai_server/LatentSync/checkpoints/latentsync_unet.pt
+  resume_ckpt_path: checkpoints/latentsync_unet.pt
   save_ckpt_steps: 1000
 
 run:
@@ -39,7 +39,7 @@ run:
   max_train_epochs: -1
 
 optimizer:
-  lr: e-7
+  lr: 1e-5
   scale_lr: false
   max_grad_norm: 1.0
   lr_scheduler: constant

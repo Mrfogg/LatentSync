@@ -13,9 +13,6 @@ import signal
 import os
 
 config_file_path = 'configs/system/digital_hunman_conf.json'
-if os.environ['dh_env'] == 'test':
-    config_file_path = 'configs/system/digital_hunman_conf_test.json'
-print(config_file_path)
 f = open('configs/system/digital_hunman_conf.json')
 DHS = json.loads(f.read())
 notify_url = DHS.get('notify_url')
@@ -132,7 +129,7 @@ def handle_sigterm(signum, frame):
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, handle_sigterm)
     args = Para()
-    args.unet_config_path = "configs/unet/stage2_efficient.yaml"
+    args.unet_config_path = "configs/unet/second_stage_prod.yaml"
     args.inference_ckpt_path = "checkpoints/checkpoints-4-5.pt"
     args.seed = 1
     config = OmegaConf.load(args.unet_config_path)
@@ -140,6 +137,7 @@ if __name__ == '__main__':
     logger.info("数字人系统启动")
     while True and not shutdown_requested:
         try:
+            time.sleep(1)
             torch.cuda.empty_cache()
             raw_data = requests.get(TASK_URL, headers={'token': TOKEN})
             task_data = raw_data.json()
@@ -151,47 +149,53 @@ if __name__ == '__main__':
                 time.sleep(2)
                 continue
             lists = task_data.get("data", {}).get("lists", [])
-            task = lists[-1]
-            if task.get('mode') != '普通模式':
-                continue
-            dh = DHS[task.get('video', {}).get('voice_name')]
-            if task.get('content') != "":  # 文本合成
-                audio_conf = dh.get('audio_conf')
-                uid = uuid.uuid4().__str__()
-                audio_output_path = audio_out_path_format % uid
-                status = subprocess.run(
-                    ['/home/qc/miniconda3/envs/GPTSoVits/bin/python', "GPT_SoVITS/inference_cli.py", "--gpt_model",
-                     audio_conf.get('gpt_model'), '--sovits_model',
-                     audio_conf.get('sovits_model'),
-                     '--ref_audio',
-                     '/home/qc/ai_server/ai_server/assets/数字人/%s/%s' % (
-                         dh.get('name'), audio_conf.get('ref_audio')),
-                     '--ref_text', audio_conf.get('ref_text'),
-                     '--ref_language', '中文', '--target_text', task.get('content'), '--target_language', '中文',
-                     '--output_path', audio_output_path, '--speed', "%.1f" % audio_conf.get('speed'), '--inp_refs',
-                     audio_conf.get('inp_refs')],  # 要运行的命令和参数
-                    text=True,  # 以文本形式处理输出
-                    cwd=GPT_SOVotts_dir  # 指定工作目录
-                )
-                if status.returncode == 0:
+            for task in lists[::-1]:
+                if task.get('account') == '13002090253':
+                    continue
+                if task.get('mode') != '普通模式':
+                    continue
+                dh = DHS[task.get('video', {}).get('voice_name')]
+                if task.get('content') != "":  # 文本合成
+                    audio_conf = dh.get('audio_conf')
+                    uid = uuid.uuid4().__str__()
+                    audio_output_path = audio_out_path_format % uid
+                    status = subprocess.run(
+                        ['/home/qc/miniconda3/envs/GPTSoVits/bin/python', "GPT_SoVITS/inference_cli.py", "--gpt_model",
+                         audio_conf.get('gpt_model'), '--sovits_model',
+                         audio_conf.get('sovits_model'),
+                         '--ref_audio',
+                         '/home/qc/ai_server/ai_server/assets/数字人/%s/%s' % (
+                             dh.get('name'), audio_conf.get('ref_audio')),
+                         '--ref_text', audio_conf.get('ref_text'),
+                         '--ref_language', '中文', '--target_text', task.get('content'), '--target_language', '中文',
+                         '--output_path', audio_output_path, '--speed', "%.1f" % audio_conf.get('speed'), '--inp_refs',
+                         audio_conf.get('inp_refs')],  # 要运行的命令和参数
+                        text=True,  # 以文本形式处理输出
+                        cwd=GPT_SOVotts_dir  # 指定工作目录
+                    )
+                    if status.returncode == 0:
+                        full_path = download_file(task.get('video').get('video_url'), f'/data/tmp')
+                        video_output_path = f'/data/tmp/{uid}.mp4'
+                        pm.process_video(full_path, audio_output_path, video_output_path,
+                                         guidance_scale=dh.get('guidance_scale'))
+                        res = upload_file_to_server(notify_url, video_output_path,
+                                                    {'taskid': task.get('task_id'), 'errcode': 0, 'status': 1})
+                        logger.info(res)
+                        os.remove(video_output_path)
+                        os.remove(audio_output_path)
+                    else:
+                        res = upload_file_to_server(notify_url, "",
+                                                    {'taskid': task.get('task_id'), 'errcode': 0, 'status': 1})
+                if task.get('voice_url', '') != '':
+                    voice_path = download_file(task.get('voice_url'), f'/data/tmp')
                     full_path = download_file(task.get('video').get('video_url'), f'/data/tmp')
+                    uid = uuid.uuid4().__str__()
                     video_output_path = f'/data/tmp/{uid}.mp4'
-                    pm.process_video(full_path, audio_output_path, video_output_path,
-                                     guidance_scale=dh.get('guidance_scale'))
+                    pm.process_video(full_path, voice_path, video_output_path, guidance_scale=dh.get('guidance_scale'))
                     res = upload_file_to_server(notify_url, video_output_path,
                                                 {'taskid': task.get('task_id'), 'errcode': 0, 'status': 1})
-                    logger.info(res)
-                else:
-                    res = upload_file_to_server(notify_url, "",
-                                                {'taskid': task.get('task_id'), 'errcode': 0, 'status': 1})
-            if task.get('voice_url', '') != '':
-                voice_path = download_file(task.get('voice_url'), f'/data/tmp')
-                full_path = download_file(task.get('video').get('video_url'), f'/data/tmp')
-                uid = uuid.uuid4().__str__()
-                video_output_path = f'/data/tmp/{uid}.mp4'
-                pm.process_video(full_path, voice_path, video_output_path, guidance_scale=dh.get('guidance_scale'))
-                res = upload_file_to_server(notify_url, video_output_path,
-                                            {'taskid': task.get('task_id'), 'errcode': 0, 'status': 1})
+                    os.remove(video_output_path)
+                    os.remove(voice_path)
 
         except KeyboardInterrupt:
             pm.close()

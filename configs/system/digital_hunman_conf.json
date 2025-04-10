@@ -4,7 +4,7 @@
   "notify_url": "https://suibai.vip/api/avatar.aiAvatarRecord/receiveAiAvatar",
   "suhuaren": {
     "name": "苏华仁短视频",
-    "guidance_scale": 2,
+    "guidance_scale": 1,
     "inference_steps": 30,
     "audio_conf": {
       "ref_audio": "ssshhhrrr2.MP3",
@@ -17,7 +17,7 @@
   },
   "kanghualan": {
     "name": "康华兰",
-    "guidance_scale": 1.5,
+    "guidance_scale": 1,
     "inference_steps": 30,
     "audio_conf": {
       "ref_audio": "kanghualan.wav",
@@ -59,12 +59,12 @@
     "guidance_scale": 1,
     "inference_steps": 20,
     "audio_conf": {
-      "ref_audio": "xxz.wav",
-      "ref_text": "它不限时间为什么，它本来就是鸡蛋茶，它不影响它又不是用",
+      "ref_audio": "xxz.MP3_0035305280_0035501120.wav",
+      "ref_text": "所以，大部分的人之所以，有执念，是因为，还没有跳出来去看。",
       "speed": 1,
-      "gpt_model": "GPT_weights_v2/xuanxianzi3.18-e35.ckpt",
-      "sovits_model": "SoVITS_weights_v2/xuanxianzi3.18_e40_s18760.pth",
-      "inp_refs": "GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3703560320_3703731840.wav GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3695984320_3696219840.wav GPT-SoVITS/output/slicer_opt_lyy/liuyuanyin.mp3_3698536000_3699055040.wav"
+      "gpt_model": "GPT_weights_v2/xuanxianzi3.18-e25.ckpt",
+      "sovits_model": "SoVITS_weights_v2/xuanxianzi3.18_e32_s15008.pth",
+      "inp_refs": "/home/qc/data/参考音频/xuanxianzi/xxz.MP3_0032691520_0032857280.wav /home/qc/data/参考音频/xuanxianzi/xxz.MP3_0034370240_0034472320.wav /home/qc/data/参考音频/xuanxianzi/xxz.MP3_0039400320_0039574080.wav /home/qc/data/参考音频/xuanxianzi/xxz.MP3_0035305280_0035501120.wav /home/qc/data/参考音频/xuanxianzi/xxz.MP3_0033134400_0033286720.wav"
     }
   },
   "jialiang": {
