@@ -475,6 +475,7 @@ class LipsyncPipelineSubprocess(DiffusionPipeline):
                 decoded_latents, pixel_values, 1 - masks, device, weight_dtype
             )
             synced_video_frames.append(decoded_latents)
+            print(decoded_latents,"dec")
             # masked_video_frames.append(masked_pixel_values)
         logger.info(f"finished inference... rank:{self.rank}")
 

@@ -17,12 +17,12 @@ from loguru import logger
 
 
 class Inference:
-    def __init__(self, redis_client, consume_queue, gpu_id, restore_queue_name, affine_col):
+    def __init__(self, redis_client, consume_queue, gpu_id, restore_queue_name, affine_col, inference_ckpt_path):
         self.redis_client = redis_client
         self.consume_queue = consume_queue
         self.gpu_id = gpu_id
         self.restore_queue_name = restore_queue_name
-        self.process = self.init_pipeline('checkpoints/latentsync_unet.pt')
+        self.process = self.init_pipeline(inference_ckpt_path)
         self.affine_col = affine_col
 
     def init_pipeline(self, inference_ckpt_path) -> LipsyncPipelineSubprocess:
@@ -73,7 +73,7 @@ class Inference:
             end = m['end']
             affine_info = self.affine_col.find_one({'_id': video_path})
             logger.info(f"start inference: {video_path}, {voice_path}, {start}, {end}")
-            pt_path = self.process.inference_batch(video_path, voice_path, start, end,affine_info)
+            pt_path = self.process.inference_batch(video_path, voice_path, start, end, affine_info)
             m['pt_path'] = pt_path
             self.redis_client.rpush(self.restore_queue_name, json.dumps(m))
             logger.info(m)

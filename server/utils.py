@@ -7,6 +7,7 @@ from pymongo import MongoClient
 import torch
 import numpy as np
 
+
 def get_filename_from_url(url):
     """
     从 URL 中提取文件名，并去掉查询字符串和锚点。
@@ -72,6 +73,7 @@ def get_mongo_client():
     mlient = MongoClient('mongodb://192.168.1.9:27017/')
     return mlient
 
+
 def affine_transform_video(video_path, affine_info):
     logger.info(f"affine transforming video {video_path}...")
     cache_path = '/data/data8T/video_process/' + os.path.basename(video_path) + '/'
@@ -82,13 +84,40 @@ def affine_transform_video(video_path, affine_info):
     logger.info(affine_info)
     if os.path.exists(cache_path):
         boxes_memmap = np.memmap(os.path.join(cache_path, boxes_file_name), mode='r',
-                                 shape=tuple(affine_info['boxes_shape']))
+                                 shape=tuple(affine_info['boxes_shape']),dtype=np.uint32)
 
         affine_matrix_memmap = np.memmap(os.path.join(cache_path, affine_matrix_file_name), mode='r',
-                                         shape=tuple(affine_info['affine_shape']))
+                                         shape=tuple(affine_info['affine_shape']), dtype=np.float64)
         faces = torch.load(os.path.join(cache_path, faces_file_name))
 
         video_frames_memmap = np.memmap(os.path.join(cache_path, video_frames_file_name), mode='r',
                                         shape=tuple(affine_info['video_frame_shape']))
         return faces, video_frames_memmap, boxes_memmap, affine_matrix_memmap
     return None
+
+
+def upload_file_to_server(url, file_path, other_params):
+    """
+    上传文件到服务器的函数
+
+    :param url: 服务器的上传接口 URL
+    :param file_path: 要上传的文件路径
+    :param other_params: 其他参数，字典形式
+    :return: 服务器返回的响应内容
+    """
+    # 打开文件
+    data = other_params
+    if os.path.exists(file_path) and file_path:
+        with open(file_path, 'rb') as file:
+            # 构造文件上传的字典
+            files = {
+                'target_file': (file_path, file),
+            }
+
+            # 发送 POST 请求
+            response = requests.post(url, files=files, data=data)
+    else:
+        response = requests.post(url, data=data)
+
+    # 返回响应内容
+    return response.json()  # 假设服务器返回的是 JSON 格式

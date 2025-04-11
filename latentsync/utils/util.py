@@ -45,12 +45,14 @@ def read_json(filepath: str):
 
 
 def read_video(video_path: str, change_fps=True, use_decord=True):
+    tmp_path = '/data/data8T/tmp'
+    base_name = os.path.basename(video_path)
+    target_video_path = os.path.join(tmp_path, base_name)
     if change_fps:
         command = (
-            f"ffmpeg -loglevel error -y -nostdin -i {video_path} -r 25 -crf 18 {video_path}"
+            f"ffmpeg -loglevel error -y -nostdin -i {video_path} -r 25 -crf 18 {target_video_path}"
         )
         subprocess.run(command, shell=True)
-    target_video_path = video_path
 
     if use_decord:
         return read_video_decord(target_video_path)

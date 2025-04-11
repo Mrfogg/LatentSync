@@ -130,7 +130,7 @@ if __name__ == '__main__':
     signal.signal(signal.SIGTERM, handle_sigterm)
     args = Para()
     args.unet_config_path = "configs/unet/second_stage_prod.yaml"
-    args.inference_ckpt_path = "debug/unet/train-2025_04_09-18:29:43/checkpoints/checkpoint-55000.pt"
+    args.inference_ckpt_path = "checkpoints/checkpoint-63000.pt"
     args.seed = 1
     config = OmegaConf.load(args.unet_config_path)
     pm = PipelineMaster(config, args)  #

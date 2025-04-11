@@ -1,13 +1,16 @@
 from loguru import logger
 import requests
 import time
-from server.utils import download_file
+from server.utils import download_file, upload_file_to_server
 from server.const import *
 import json
 import subprocess
 from datetime import datetime, timedelta
 import os
 import uuid
+import numpy as np
+from server.const import GPU_NUM
+from latentsync.utils.util import write_video
 
 
 class Master:
@@ -19,6 +22,7 @@ class Master:
         self.task_url = DHS.get('task_url')
         self.token = DHS.get('TOKEN')
         self.DHS = DHS
+        self.notify_url = DHS.get('notify_url')
         self.GPT_SOVotts_Dir = '/home/qc/workspace/GPT-SoVITS'
         self.next_queue_name = next_queue_name
 
@@ -61,9 +65,10 @@ class Master:
                 continue
             lists = task_data.get("data", {}).get("lists", [])
             for task in lists[::-1]:
-                if task.get('mode') != '普通模式' or task.get('account') != '13002090253':
+                if task.get('mode') != '普通模式':
                     continue
-                if not self.avatar_record_col.find_one({'task_id': task.get('task_id')}):
+                mongo_task = self.avatar_record_col.find_one({'task_id': task.get('task_id')})
+                if not mongo_task:
                     task['_id'] = task.get('task_id')
                     video_url = task.get('video', {}).get('video_url', '')
                     video_path = download_file(video_url, TEMPPLATE_VIDEO_PATH)
@@ -86,4 +91,24 @@ class Master:
                     logger.info(f"lpush queue {self.next_queue_name} task_id: {task.get('task_id')}")
 
                 else:
-                    pass  # 这里写检测逻辑
+                    sub_result = mongo_task.get('video_out_put')
+                    sub_videos = []
+                    if sub_result and len(sub_result) == mongo_task.get('num_parts'):
+                        logger.info(f"开始合并视频 {mongo_task.get('task_id')}")
+                        for k in sorted(sub_result.keys(), key=lambda x: int(x)):
+                            sub_videos.append(np.load(sub_result[k]))
+                        out_video_frames = np.concatenate(sub_videos)
+                        temp_dir = "temp_inf"
+                        n = uuid.uuid4().__str__()
+                        logger.info(f"结束numpy拼接视频 {mongo_task.get('task_id')}.mp4")
+                        gen_video_out_path = os.path.join(temp_dir, n + ".mp4")
+                        write_video(gen_video_out_path, out_video_frames, fps=25)
+
+                        uid = uuid.uuid4().__str__()
+                        video_output_path = f'/data/tmp/{uid}.mp4'
+                        command = f"/home/qc/miniconda3/envs/latentsync/bin/ffmpeg -y -loglevel error -nostdin -i {gen_video_out_path} -i {mongo_task.get('voice_path')} -c:v libx264 -c:a aac -q:v 0 -q:a 0 {video_output_path}"
+                        subprocess.run(command, shell=True)
+                        logger.info(f"结束合并视频 {video_output_path}.mp4")
+                        res = upload_file_to_server(self.notify_url, video_output_path,
+                                                    {'taskid': task.get('task_id'), 'errcode': 0, 'status': 1})
+                        logger.info(f"upload_file_to_server success: {res}")

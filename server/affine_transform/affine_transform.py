@@ -10,7 +10,8 @@ from latentsync.whisper.audio2feature import Audio2Feature
 from latentsync.utils.util import read_video, read_audio, write_video
 from server.const import GPU_NUM, SUB_INFERENCE_TASK
 from loguru import logger
-import  shutil
+import shutil
+
 
 # affine_transform  拆分任务
 def init_audio_encoder():
@@ -20,10 +21,10 @@ def init_audio_encoder():
 
 
 class AffineTransform:
-    def __init__(self, redis_client, queue_name, affine_col):
+    def __init__(self, redis_client, queue_name, affine_col, gpu_id):
         self.redis_client = redis_client
         self.queue_name = queue_name
-        self.image_processor = ImageProcessor(256, mask="fix_mask", device="cuda")
+        self.image_processor = ImageProcessor(256, mask="fix_mask", device=f"cuda:{gpu_id % 4}")
         self.audio_encoder = init_audio_encoder()
         self.affine_cache_col = affine_col
 
@@ -33,10 +34,29 @@ class AffineTransform:
 
         return whisper_chunks
 
+    def acquire_lock(self, video_path):
+        while True:  # 手搓一个简易的分布式锁
+            time.sleep(1)
+            tr = self.affine_cache_col.find_one({'video_path': video_path})
+            if tr is None:
+                self.affine_cache_col.insert_one({
+                    '_id': video_path,
+                })
+                return 0  # 当前没有缓存，退出
+            else:
+                if tr.get('boxes_shape') is None:
+                    continue  # 正在缓存  需要等待
+                else:
+                    return 1  # 已缓存, 退出循环
+
     def affine_transform_video(self, video_path, image_processor):
-        cache_path = '/data/data8T/video_process/' + os.path.basename(video_path) + '/'
-        if self.affine_cache_col.find_one({'video_path': video_path}):
+        status = self.acquire_lock(video_path)
+        if status == 1:
             return
+        cache_path = '/data/data8T/video_process/' + os.path.basename(video_path) + '/'
+        if os.path.exists(cache_path):
+            shutil.rmtree(cache_path)
+        os.makedirs(cache_path)
         boxes_file_name = "box.dat"
         affine_matrix_file_name = "affine_matrix.dat"
         video_frames_file_name = "video_frames.dat"
@@ -58,13 +78,14 @@ class AffineTransform:
 
         logger.info("开始写数据到磁盘")
         boxes = np.concatenate((boxes, boxes[::(-1)]))
-        boxes_memmap = np.memmap(os.path.join(cache_path, boxes_file_name), mode='w+', shape=boxes.shape)
+        boxes_memmap = np.memmap(os.path.join(cache_path, boxes_file_name), mode='w+', shape=boxes.shape,
+                                 dtype=np.uint32)
         boxes_memmap[:] = boxes
         boxes_memmap.flush()
 
         affine_matrices = np.concatenate((affine_matrices, affine_matrices[::-1]))
         affine_matrix_memmap = np.memmap(os.path.join(cache_path, affine_matrix_file_name), mode='w+',
-                                         shape=affine_matrices.shape)
+                                         shape=affine_matrices.shape, dtype=np.float64)
         affine_matrix_memmap[:] = affine_matrices
         affine_matrix_memmap.flush()
 
@@ -80,13 +101,12 @@ class AffineTransform:
         video_frames_memmap[:] = video_frames
         video_frames_memmap.flush()
         logger.info("结束写数据到磁盘")
-        self.affine_cache_col.insert_one({
+        self.affine_cache_col.update_one({'_id': video_path}, {'$set': {
             'video_path': video_path,
             'boxes_shape': boxes.shape,
             'affine_shape': affine_matrices.shape,
             'video_frame_shape': video_frames.shape,
-            '_id': video_path,
-        })
+        }}, upsert=True)
         return
 
     def run(self):
@@ -117,6 +137,7 @@ class AffineTransform:
                 sub_tasks[str(i)] = {'start': start, 'end': end}
                 m['start'] = start
                 m['end'] = end
+                m['num_parts'] = num_parts
                 start = end
                 self.redis_client.rpush(SUB_INFERENCE_TASK, json.dumps(m))
                 logger.info(f"sub tasks success :{m}")

@@ -419,14 +419,23 @@ class LipsyncPipelineSubprocess(DiffusionPipeline):
             # masked_video_frames.append(masked_pixel_values)
         logger.info(f"finished inference...")
 
+        #
+        # logger.debug(f"restore_video {len(synced_video_frames)} frames, success ")
         if is_train:
             self.unet.train()
 
+        temp_dir = "temp_inf"
+        # if os.path.exists(temp_dir):
+        #     shutil.rmtree(temp_dir)
+        # if is_train:
+        #     self.unet.train()
+        #
         temp_dir = "temp_inf"
         os.makedirs(temp_dir, exist_ok=True)
         import uuid
         n = uuid.uuid4().__str__()
         result_out_path = os.path.join(temp_dir, n + ".pt")
-        torch.save(synced_video_frames, result_out_path)
+        torch.save(torch.cat(synced_video_frames), result_out_path)
+
         logger.info(f"finish all subprocess...")
         return result_out_path
