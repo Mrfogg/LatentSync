@@ -147,12 +147,12 @@ if __name__ == '__main__':
                         res = upload_file_to_server(notify_url, fy_video_path,
                                                     {'taskid': task.get('task_id'), 'errcode': 0,
                                                      'status': 1})
-                        ai_avatar_record_col.delete_one({'_id': task['_id']})
+                        #ai_avatar_record_col.delete_one({'_id': task['_id']})
                     elif status == 4:
                         res = upload_file_to_server(notify_url, "",
                                                     {'taskid': task.get('task_id'), 'errcode': 500,
                                                      'status': 1})
-                        ai_avatar_record_col.delete_one({'_id': task['_id']})
+                        #ai_avatar_record_col.delete_one({'_id': task['_id']})
                 else:
                     if task.get('content') != "":  # 文本合成
                         dh = DHS[task.get('video', {}).get('voice_name')]

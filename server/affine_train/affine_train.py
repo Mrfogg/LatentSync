@@ -36,6 +36,7 @@ class AffineTrainMaster:
                 mongo_image = self.affine_train_col.find_one({'_id': image.get('sn')})
                 if not mongo_image:
                     video_path = download_file(image.get('fileUrl'), TEMPPLATE_VIDEO_PATH)
+                    self.affine_col.delete_one({'_id':video_path})
                     if video_path == '':
                         logger.error(f"下载失败url:{image.get('fileUrl')}")
                         continue

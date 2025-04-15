@@ -52,7 +52,7 @@ class AffineTransform:
     def affine_transform_video(self, video_path, image_processor):
         status = self.acquire_lock(video_path)
         if status == 1:
-            return
+            return True
         try:
             cache_path = '/data/data8T/video_process/' + os.path.basename(video_path) + '/'
             if os.path.exists(cache_path):
@@ -77,7 +77,7 @@ class AffineTransform:
                 boxes.append(box)
                 affine_matrices.append(affine_matrix)
 
-            logger.info("开始写数据到磁盘")
+            logger.info(f"开始写数据到磁盘:{video_path}")
             boxes = np.concatenate((boxes, boxes[::(-1)]))
             boxes_memmap = np.memmap(os.path.join(cache_path, boxes_file_name), mode='w+', shape=boxes.shape,
                                      dtype=np.uint32)
@@ -101,7 +101,7 @@ class AffineTransform:
                                             shape=video_frames.shape)
             video_frames_memmap[:] = video_frames
             video_frames_memmap.flush()
-            logger.info("结束写数据到磁盘")
+            logger.info(f"结束写数据到磁盘:{video_path}")
             self.affine_cache_col.update_one({'_id': video_path}, {'$set': {
                 'video_path': video_path,
                 'boxes_shape': boxes.shape,
@@ -109,12 +109,13 @@ class AffineTransform:
                 'video_frame_shape': video_frames.shape,
                 'status': 1,
             }}, upsert=True)
+            return True
         except Exception as e:
             self.affine_cache_col.update_one({'_id': video_path}, {'$set': {
                 'status': 2,
             }}, upsert=True)
             logger.error(f'affine_transform_video error: {video_path}, {e}', )
-        return
+        return False
 
     def run(self):
         while True:
