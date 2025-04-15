@@ -53,6 +53,22 @@ class Master:
             return True
         return False
 
+    def merge_sub_video(self, task_id, sub_video_map):
+        sample_data = np.load(sub_video_map['0'], mmap_mode='r')  # 仅读取元数据
+        dtype = sample_data.dtype
+        shape = sample_data.shape
+        total_samples = sum(np.load(sub_video_map[f], mmap_mode='r').shape[0] for f in sub_video_map.keys())
+        final_shape = (total_samples, *shape[1:])
+        merged = np.memmap(f"temp_inf/{task_id}.npy", dtype=dtype, mode='w+', shape=final_shape)
+        current_idx = 0
+        for k in sorted(sub_video_map.keys(), key=lambda x: int(x)):
+            chunk = np.load(sub_video_map[k], mmap_mode='r')  # 内存映射模式加载
+            merged[current_idx: current_idx + len(chunk)] = chunk
+            current_idx += len(chunk)
+            del chunk  # 及时释放内存
+        return merged
+
+
     def run(self):
         while True:
             time.sleep(1)
@@ -72,6 +88,9 @@ class Master:
                     task['_id'] = task.get('task_id')
                     video_url = task.get('video', {}).get('video_url', '')
                     video_path = download_file(video_url, TEMPPLATE_VIDEO_PATH)
+                    if video_path == '':
+                        logger.error(f"下载失败, taskid{task['_id'] }, url:{video_url}")
+                        continue
                     task['video_path'] = video_path
                     if task.get('voice_url', '') != '':
                         voice_path = download_file(task.get('voice_url', ''), TMP_DIR)
@@ -92,12 +111,9 @@ class Master:
 
                 else:
                     sub_result = mongo_task.get('video_out_put')
-                    sub_videos = []
                     if sub_result and len(sub_result) == mongo_task.get('num_parts'):
                         logger.info(f"开始合并视频 {mongo_task.get('task_id')}")
-                        for k in sorted(sub_result.keys(), key=lambda x: int(x)):
-                            sub_videos.append(np.load(sub_result[k]))
-                        out_video_frames = np.concatenate(sub_videos)
+                        out_video_frames = self.merge_sub_video(mongo_task.get('task_id'), sub_result)
                         temp_dir = "temp_inf"
                         n = uuid.uuid4().__str__()
                         logger.info(f"结束numpy拼接视频 {mongo_task.get('task_id')}.mp4")

@@ -14,11 +14,11 @@ import uuid
 
 
 class Restore:
-    def __init__(self, redis_client, consume_queue, affine_col, ai_avatar_record_col):
+    def __init__(self, redis_client, consume_queue, affine_col, ai_avatar_record_col, gpu_id):
         self.redis_client = redis_client
         self.consume_queue = consume_queue
         self.affine_col = affine_col
-        self.image_processor = ImageProcessor(256, mask="fix_mask", device="cuda")
+        self.image_processor = ImageProcessor(256, mask="fix_mask", device=f"cpu")
         self.ai_avatar_record_col = ai_avatar_record_col
 
     def restore_video(self, faces, video_frames, boxes, affine_matrices, start, num_frames: int = 16):

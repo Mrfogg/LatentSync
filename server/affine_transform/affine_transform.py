@@ -37,7 +37,7 @@ class AffineTransform:
     def acquire_lock(self, video_path):
         while True:  # 手搓一个简易的分布式锁
             time.sleep(1)
-            tr = self.affine_cache_col.find_one({'video_path': video_path})
+            tr = self.affine_cache_col.find_one({'_id': video_path})
             if tr is None:
                 self.affine_cache_col.insert_one({
                     '_id': video_path,
@@ -53,60 +53,67 @@ class AffineTransform:
         status = self.acquire_lock(video_path)
         if status == 1:
             return
-        cache_path = '/data/data8T/video_process/' + os.path.basename(video_path) + '/'
-        if os.path.exists(cache_path):
-            shutil.rmtree(cache_path)
-        os.makedirs(cache_path)
-        boxes_file_name = "box.dat"
-        affine_matrix_file_name = "affine_matrix.dat"
-        video_frames_file_name = "video_frames.dat"
-        faces_file_name = "faces.pth"
-        video_frames = read_video(video_path, use_decord=False)
-        faces = []
-        boxes = []
-        affine_matrices = []
-        print(f"Affine transforming {len(video_frames)} faces...")
-        i = 0
-        for frame in tqdm.tqdm(video_frames):
-            if i == len(video_frames) - len(video_frames) % 16:
-                break
-            i += 1
-            face, box, affine_matrix = image_processor.affine_transform(frame)
-            faces.append(face)
-            boxes.append(box)
-            affine_matrices.append(affine_matrix)
+        try:
+            cache_path = '/data/data8T/video_process/' + os.path.basename(video_path) + '/'
+            if os.path.exists(cache_path):
+                shutil.rmtree(cache_path)
+            os.makedirs(cache_path)
+            boxes_file_name = "box.dat"
+            affine_matrix_file_name = "affine_matrix.dat"
+            video_frames_file_name = "video_frames.dat"
+            faces_file_name = "faces.pth"
+            video_frames = read_video(video_path, use_decord=False)
+            faces = []
+            boxes = []
+            affine_matrices = []
+            print(f"Affine transforming {len(video_frames)} faces...")
+            i = 0
+            for frame in tqdm.tqdm(video_frames):
+                if i == len(video_frames) - len(video_frames) % 16:
+                    break
+                i += 1
+                face, box, affine_matrix = image_processor.affine_transform(frame)
+                faces.append(face)
+                boxes.append(box)
+                affine_matrices.append(affine_matrix)
 
-        logger.info("开始写数据到磁盘")
-        boxes = np.concatenate((boxes, boxes[::(-1)]))
-        boxes_memmap = np.memmap(os.path.join(cache_path, boxes_file_name), mode='w+', shape=boxes.shape,
-                                 dtype=np.uint32)
-        boxes_memmap[:] = boxes
-        boxes_memmap.flush()
+            logger.info("开始写数据到磁盘")
+            boxes = np.concatenate((boxes, boxes[::(-1)]))
+            boxes_memmap = np.memmap(os.path.join(cache_path, boxes_file_name), mode='w+', shape=boxes.shape,
+                                     dtype=np.uint32)
+            boxes_memmap[:] = boxes
+            boxes_memmap.flush()
 
-        affine_matrices = np.concatenate((affine_matrices, affine_matrices[::-1]))
-        affine_matrix_memmap = np.memmap(os.path.join(cache_path, affine_matrix_file_name), mode='w+',
-                                         shape=affine_matrices.shape, dtype=np.float64)
-        affine_matrix_memmap[:] = affine_matrices
-        affine_matrix_memmap.flush()
+            affine_matrices = np.concatenate((affine_matrices, affine_matrices[::-1]))
+            affine_matrix_memmap = np.memmap(os.path.join(cache_path, affine_matrix_file_name), mode='w+',
+                                             shape=affine_matrices.shape, dtype=np.float64)
+            affine_matrix_memmap[:] = affine_matrices
+            affine_matrix_memmap.flush()
 
-        faces = torch.stack(faces)
-        f = torch.flip(faces, dims=(0,))
-        faces = torch.cat((faces, f), dim=0)
-        torch.save(faces, os.path.join(cache_path, faces_file_name))
+            faces = torch.stack(faces)
+            f = torch.flip(faces, dims=(0,))
+            faces = torch.cat((faces, f), dim=0)
+            torch.save(faces, os.path.join(cache_path, faces_file_name))
 
-        video_frames = video_frames[:len(faces) // 2]
-        video_frames = np.concatenate((video_frames, video_frames[::-1]))
-        video_frames_memmap = np.memmap(os.path.join(cache_path, video_frames_file_name), mode='w+',
-                                        shape=video_frames.shape)
-        video_frames_memmap[:] = video_frames
-        video_frames_memmap.flush()
-        logger.info("结束写数据到磁盘")
-        self.affine_cache_col.update_one({'_id': video_path}, {'$set': {
-            'video_path': video_path,
-            'boxes_shape': boxes.shape,
-            'affine_shape': affine_matrices.shape,
-            'video_frame_shape': video_frames.shape,
-        }}, upsert=True)
+            video_frames = video_frames[:len(faces) // 2]
+            video_frames = np.concatenate((video_frames, video_frames[::-1]))
+            video_frames_memmap = np.memmap(os.path.join(cache_path, video_frames_file_name), mode='w+',
+                                            shape=video_frames.shape)
+            video_frames_memmap[:] = video_frames
+            video_frames_memmap.flush()
+            logger.info("结束写数据到磁盘")
+            self.affine_cache_col.update_one({'_id': video_path}, {'$set': {
+                'video_path': video_path,
+                'boxes_shape': boxes.shape,
+                'affine_shape': affine_matrices.shape,
+                'video_frame_shape': video_frames.shape,
+                'status': 1,
+            }}, upsert=True)
+        except Exception as e:
+            self.affine_cache_col.update_one({'_id': video_path}, {'$set': {
+                'status': 2,
+            }}, upsert=True)
+            logger.error(f'affine_transform_video error: {video_path}, {e}', )
         return
 
     def run(self):
@@ -117,9 +124,11 @@ class AffineTransform:
                 continue
             m = json.loads(item)
             video_path = m['video_path']
-            voice_path = m['voice_path']
             self.affine_transform_video(video_path, self.image_processor)
-
+            if m.get('type', '') == 'affine_train':
+                continue
+            logger.info(m)
+            voice_path = m['voice_path']
             whisper_chunks = self.whisper_feature(self.audio_encoder, voice_path)
             num_inferences = len(whisper_chunks) // 16
             if num_inferences > 10:

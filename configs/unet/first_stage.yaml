@@ -17,7 +17,7 @@ data:
   video_fps: 25
 
 ckpt:
-  resume_ckpt_path: checkpoints/latentsync_unet.pt
+  resume_ckpt_path: /home/qc/workspace/LatentSync/debug/unet/train-2025_04_08-11:26:50/checkpoints/checkpoint-29000.pt
   save_ckpt_steps: 1000
 
 run:
