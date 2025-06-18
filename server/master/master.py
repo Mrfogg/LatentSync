@@ -54,7 +54,8 @@ class Master:
         return False
 
     def merge_sub_video(self, task_id, sub_video_map):
-        sample_data = np.load(sub_video_map['0'], mmap_mode='r')  # 仅读取元数据
+        k = list(sub_video_map.keys())[0]
+        sample_data = np.load(sub_video_map[k], mmap_mode='r')  # 仅读取元数据
         dtype = sample_data.dtype
         shape = sample_data.shape
         total_samples = sum(np.load(sub_video_map[f], mmap_mode='r').shape[0] for f in sub_video_map.keys())
@@ -65,14 +66,15 @@ class Master:
             chunk = np.load(sub_video_map[k], mmap_mode='r')  # 内存映射模式加载
             merged[current_idx: current_idx + len(chunk)] = chunk
             current_idx += len(chunk)
-            del chunk  # 及时释放内存
+            # del chunk  # 及时释放内存
+            # os.remove(sub_video_map[k])
         return merged
-
 
     def run(self):
         while True:
             time.sleep(1)
-            task_data = requests.get(self.task_url, headers={'token': self.token}).json()
+            resp = requests.get(self.task_url, headers={'token': self.token})
+            task_data = resp.json()
             if task_data['code'] == -1:
                 logger.info(task_data['msg'])
                 break
@@ -83,13 +85,24 @@ class Master:
             for task in lists[::-1]:
                 if task.get('mode') != '普通模式':
                     continue
+                if not task.get('video'):
+                    logger.error(f"没有视频文件")
+                    res = upload_file_to_server(self.notify_url, "",
+                                                {'taskid': task.get('task_id'), 'errcode': 500,
+                                                 'status': 1})
+                    logger.info(res)
+                    continue
                 mongo_task = self.avatar_record_col.find_one({'task_id': task.get('task_id')})
                 if not mongo_task:
                     task['_id'] = task.get('task_id')
                     video_url = task.get('video', {}).get('video_url', '')
                     video_path = download_file(video_url, TEMPPLATE_VIDEO_PATH)
                     if video_path == '':
-                        logger.error(f"下载失败, taskid{task['_id'] }, url:{video_url}")
+                        logger.error(f"下载失败, taskid{task['_id']}, url:{video_url}")
+                        res = upload_file_to_server(self.notify_url, "",
+                                                    {'taskid': task.get('task_id'), 'errcode': 500,
+                                                     'status': 1})
+                        logger.info(res)
                         continue
                     task['video_path'] = video_path
                     if task.get('voice_url', '') != '':
@@ -127,4 +140,7 @@ class Master:
                         logger.info(f"结束合并视频 {video_output_path}.mp4")
                         res = upload_file_to_server(self.notify_url, video_output_path,
                                                     {'taskid': task.get('task_id'), 'errcode': 0, 'status': 1})
-                        logger.info(f"upload_file_to_server success: {res}")
+                        logger.info(f"upload_file_to_server success: {res},{out_video_frames.filename}")
+                        os.remove(out_video_frames.filename)
+                        for _, v in sub_result.items():
+                            os.remove(v)

@@ -287,6 +287,7 @@ class LipsyncPipelineSubprocess(DiffusionPipeline):
                         generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
                         callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
                         callback_steps: Optional[int] = 1,
+                        offset=0,
                         ):
         is_train = self.unet.training
         self.unet.eval()
@@ -345,7 +346,8 @@ class LipsyncPipelineSubprocess(DiffusionPipeline):
         print(f"Generating {len(all_latents)} latents...")
         for i in tqdm.tqdm(range(start, end), desc="Doing inference..."):
             if self.unet.add_audio_layer:
-                audio_embeds = torch.stack(whisper_chunks[i * num_frames: (i + 1) * num_frames])
+                audio_embeds = torch.stack(
+                    whisper_chunks[(i - offset) * num_frames: (i + 1 - offset) * num_frames])
                 audio_embeds = audio_embeds.to(device, dtype=weight_dtype)
                 if do_classifier_free_guidance:
                     null_audio_embeds = torch.zeros_like(audio_embeds)
@@ -353,7 +355,7 @@ class LipsyncPipelineSubprocess(DiffusionPipeline):
             else:
                 audio_embeds = None
             inference_faces = faces[i * num_frames % len(faces): i * num_frames % len(faces) + num_frames]
-            latents = all_latents[:, :, i * num_frames: (i + 1) * num_frames]
+            latents = all_latents[:, :, (i - offset) * num_frames: (i + 1 - offset) * num_frames]
             pixel_values, masked_pixel_values, masks = self.image_processor.prepare_masks_and_masked_images(
                 inference_faces, affine_transform=False
             )

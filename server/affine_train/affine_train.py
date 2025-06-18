@@ -7,7 +7,7 @@ import time
 import os
 
 from server.utils import download_file, get_filename_from_url
-from server.const import IMAGE_URL, TEMPPLATE_VIDEO_PATH, RECIEVE_IMAGE_URL
+from server.const import IMAGE_URL, TEMPPLATE_VIDEO_PATH, RECIEVE_IMAGE_URL, TOKEN
 
 
 class AffineTrainMaster:
@@ -24,7 +24,7 @@ class AffineTrainMaster:
     def run(self):
         while True:
             time.sleep(1)
-            task_data = requests.get(IMAGE_URL, headers={'token': '9ed86c716c2e948098b247b01a93190f'}).json()
+            task_data = requests.get(IMAGE_URL, headers={'token': TOKEN}).json()
             if task_data['code'] == -1:
                 logger.info(task_data['msg'])
                 break
@@ -36,7 +36,7 @@ class AffineTrainMaster:
                 mongo_image = self.affine_train_col.find_one({'_id': image.get('sn')})
                 if not mongo_image:
                     video_path = download_file(image.get('fileUrl'), TEMPPLATE_VIDEO_PATH)
-                    self.affine_col.delete_one({'_id':video_path})
+                    self.affine_col.delete_one({'_id': video_path})
                     if video_path == '':
                         logger.error(f"下载失败url:{image.get('fileUrl')}")
                         continue

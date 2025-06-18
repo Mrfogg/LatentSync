@@ -62,18 +62,18 @@ class Inference:
 
     def run(self):
         while True:
-            item = self.redis_client.lpop(self.consume_queue)
+            item = self.redis_client.blpop(self.consume_queue)
             if item is None:
                 time.sleep(1)
                 continue
-            m = json.loads(item)
+            m = json.loads(item[1])
             video_path = m['video_path']
             voice_path = m['voice_path']
             start = m['start']
             end = m['end']
             affine_info = self.affine_col.find_one({'_id': video_path})
             logger.info(f"start inference: {video_path}, {voice_path}, {start}, {end}")
-            pt_path = self.process.inference_batch(video_path, voice_path, start, end, affine_info)
+            pt_path = self.process.inference_batch(video_path, voice_path, start, end, affine_info,offset=m['offset'])
             m['pt_path'] = pt_path
             self.redis_client.rpush(self.restore_queue_name, json.dumps(m))
             logger.info(m)

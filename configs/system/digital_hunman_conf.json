@@ -1,6 +1,6 @@
 {
   "task_url": "https://suibai.vip/tenantapi/avatar.aiAvatarRecord/lists?page_no=1&page_size=100&user_info=&status=0",
-  "TOKEN": "9ed86c716c2e948098b247b01a93190f",
+  "TOKEN": "e4f23f54905b144e7219f28f8e3ac341",
   "notify_url": "https://suibai.vip/api/avatar.aiAvatarRecord/receiveAiAvatar",
   "suhuaren": {
     "name": "苏华仁短视频",
@@ -78,6 +78,19 @@
       "gpt_model": "GPT_weights_v2/jialiang3.24-e40.ckpt",
       "sovits_model": "SoVITS_weights_v2/jialiang3.24_e68_s11016.pth",
       "inp_refs": "/home/qc/data/参考音频/jialiang/JL_music.MP3_0835585280_0835776000.wav /home/qc/data/参考音频/jialiang/JL_music.MP3_0835776000_0835840640.wav  /home/qc/data/参考音频/jialiang/JL_music.MP3_0837095040_0837224640.wav /home/qc/data/参考音频/jialiang/JL_music.MP3_0837224640_0837434560.wav /home/qc/data/参考音频/jialiang/JL_music.MP3_0837434560_0837525120.wav /home/qc/data/参考音频/jialiang/JL_music.MP3_0837569600_0837753280.wav /home/qc/data/参考音频/jialiang/JL_music.MP3_0837783680_0837940480.wav"
+    }
+  },
+  "fanwei": {
+    "name": "范伟",
+    "guidance_scale": 1,
+    "inference_steps": 20,
+    "audio_conf": {
+      "ref_audio": "fw.MP3",
+      "ref_text": "员工上班摸鱼怎么办？学会阿里巴巴这4个股权激励方法，让员工啊拼命给你干活儿!",
+      "speed": 1,
+      "gpt_model": "GPT_SoVITS/pretrained_models/s1bert25hz-2kh-longer-epoch=68e-step=50232.ckpt",
+      "sovits_model": "GPT_SoVITS/pretrained_models/s2G488k.pth",
+      "inp_refs": ""
     }
   }
 }

@@ -11,7 +11,7 @@ from latentsync.utils.util import read_video, read_audio, write_video
 from server.const import GPU_NUM, SUB_INFERENCE_TASK
 from loguru import logger
 import shutil
-
+import random
 
 # affine_transform  拆分任务
 def init_audio_encoder():
@@ -35,19 +35,17 @@ class AffineTransform:
         return whisper_chunks
 
     def acquire_lock(self, video_path):
-        while True:  # 手搓一个简易的分布式锁
-            time.sleep(1)
-            tr = self.affine_cache_col.find_one({'_id': video_path})
-            if tr is None:
-                self.affine_cache_col.insert_one({
-                    '_id': video_path,
-                })
-                return 0  # 当前没有缓存，退出
+        tr = self.affine_cache_col.find_one({'_id': video_path})
+        if tr is None:
+            self.affine_cache_col.insert_one({
+                '_id': video_path,
+            })
+            return 0  # 当前没有缓存，退出
+        else:
+            if tr.get('boxes_shape') is None:
+                return 0
             else:
-                if tr.get('boxes_shape') is None:
-                    continue  # 正在缓存  需要等待
-                else:
-                    return 1  # 已缓存, 退出循环
+                return 1  # 已缓存, 退出循环
 
     def affine_transform_video(self, video_path, image_processor):
         status = self.acquire_lock(video_path)
@@ -119,11 +117,13 @@ class AffineTransform:
 
     def run(self):
         while True:
-            item = self.redis_client.lpop(self.queue_name)
+            item = self.redis_client.blpop(self.queue_name)
             if item is None:
                 time.sleep(1)
+                logger.info('tick')
                 continue
-            m = json.loads(item)
+            m = json.loads(item[1])
+            logger.info(m)
             video_path = m['video_path']
             self.affine_transform_video(video_path, self.image_processor)
             if m.get('type', '') == 'affine_train':
@@ -140,14 +140,16 @@ class AffineTransform:
             remainder = num_inferences % num_parts  # 剩余部分
             # 创建并启动多个进程
             start = 0
+            r = hash(m['task_id']) %num_inferences
             logger.info(f"start distributed task:{num_parts}")
             sub_tasks = {}
             for i in range(num_parts):
                 end = start + part_size + (1 if i < remainder else 0)
                 sub_tasks[str(i)] = {'start': start, 'end': end}
-                m['start'] = start
-                m['end'] = end
+                m['start'] = start + r
+                m['end'] = end + r
                 m['num_parts'] = num_parts
+                m['offset'] = r
                 start = end
                 self.redis_client.rpush(SUB_INFERENCE_TASK, json.dumps(m))
                 logger.info(f"sub tasks success :{m}")

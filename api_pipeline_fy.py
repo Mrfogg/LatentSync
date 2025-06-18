@@ -14,11 +14,11 @@ from urllib.parse import urlparse
 from server.utils import get_mongo_client
 
 TASK_URL = 'https://suibai.vip/tenantapi/avatar.aiAvatarRecord/lists?page_no=1&page_size=10&user_info=&status=0'
-TOKRN = '9ed86c716c2e948098b247b01a93190f'
+
 f = open('configs/system/digital_hunman_conf.json')
 DHS = json.loads(f.read())
 notify_url = 'https://suibai.vip/api/avatar.aiAvatarRecord/receiveAiAvatar'
-
+TOKEN = DHS.get('TOKEN')
 
 @dataclass
 class Para:
@@ -107,6 +107,7 @@ def upload_file_to_server(url, file_path, other_params):
 
             # 发送 POST 请求
             response = requests.post(url, files=files, data=data)
+            print(response.text)
     else:
         response = requests.post(url, data=data)
 
@@ -126,9 +127,9 @@ if __name__ == '__main__':
     while True:
         try:
             time.sleep(1)
-            task_data = requests.get(TASK_URL, headers={'token': TOKRN}).json()
+            task_data = requests.get(TASK_URL, headers={'token': TOKEN}).json()
             if task_data['code'] == -1:
-                logger.info(task_data['msg'])
+                logger.info(task_data['msg'],'请求接口失败')
                 break
             if task_data.get("data", {}).get("count", 0) == 0:
                 time.sleep(2)
@@ -191,5 +192,5 @@ if __name__ == '__main__':
             break
 
         except Exception as e:
-            logger.error(e)
+            logger.error(e,'异常')
             break

@@ -13,4 +13,5 @@ GPU_NUM = 4
 MODEL_CHECKPOINTS = 'checkpoints/checkpoint-83000.pt'
 IMAGE_URL = 'https://suibai.vip/tenantapi/video.video/lists?page_no=1&page_size=100&user_info=&status=0&start_time=&end_time='
 
+TOKEN = 'e25480970b9eddb64e6743eb0fd95884'
 RECIEVE_IMAGE_URL = 'https://suibai.vip/api/video.avatarVideo/receiveAvatarImage'

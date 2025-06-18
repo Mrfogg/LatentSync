@@ -10,11 +10,10 @@ from loguru import logger
 from urllib.parse import urlparse
 
 TASK_URL = 'https://suibai.vip/tenantapi/voicerecord.voiceRecord/lists?/lists?page_no=1&page_size=10&user_info=&status=0'
-TOKRN = '9ed86c716c2e948098b247b01a93190f'
 f = open('configs/system/digital_hunman_conf.json')
 DHS = json.loads(f.read())
 notify_url = 'https://suibai.vip/api/voice.record/receiveCloneVoice'
-
+TOKEN = DHS.get('TOKEN')
 
 @dataclass
 class Para:
@@ -111,12 +110,27 @@ def upload_file_to_server(url, file_path, other_params):
 
 
 audio_out_path_format = '/home/qc/ai_server/ai_server/upload/%s.wav'
+import re
+
+
+def remove_english_letters(text):
+    """
+    去掉字符串中的英文字母（包括大小写）。
+
+    参数：
+        text (str): 原始字符串
+
+    返回：
+        str: 去除英文字母后的字符串
+    """
+    return re.sub(r'[A-Za-z]', '', text)
+
 
 if __name__ == '__main__':
     logger.info("音频克隆系统启动")
     while True:
         try:
-            task_data = requests.get(TASK_URL, headers={'token': TOKRN}).json()
+            task_data = requests.get(TASK_URL, headers={'token': TOKEN}).json()
             if task_data['code'] == -1:
                 logger.info(task_data['msg'])
                 break
@@ -138,18 +152,20 @@ if __name__ == '__main__':
                          '/home/qc/ai_server/ai_server/assets/数字人/%s/%s' % (
                              dh.get('name'), audio_conf.get('ref_audio')),
                          '--ref_text', audio_conf.get('ref_text'),
-                         '--ref_language', '中文', '--target_text', task.get('content'), '--target_language', '中文',
+                         '--ref_language', '中文', '--target_text', remove_english_letters(task.get('content')), '--target_language', '中文',
                          '--output_path', audio_output_path, '--speed', "%.1f" % audio_conf.get('speed'), '--inp_refs',
                          audio_conf.get('inp_refs')],  # 要运行的命令和参数
                         text=True,  # 以文本形式处理输出
                         cwd=GPT_SOVotts_dir  # 指定工作目录
                     )
+                    print("aaaaaaa")
                     if status.returncode == 0:
                         res = upload_file_to_server(notify_url, audio_output_path,
                                                     {'taskid': task.get('task_id'), 'errcode': 0, 'status': 1})
                         print(res)
                     else:
-                        pass
+                        res = upload_file_to_server(notify_url, audio_output_path,
+                                                    {'taskid': task.get('task_id'), 'errcode': 500, 'status': 1})
 
         except KeyboardInterrupt:
             logger.info("音频系统关闭")

@@ -43,11 +43,11 @@ class Restore:
 
     def run(self):
         while True:
-            item = self.redis_client.lpop(self.consume_queue)
+            item = self.redis_client.blpop(self.consume_queue)
             if item is None:
                 time.sleep(1)
                 continue
-            m = json.loads(item)
+            m = json.loads(item[1])
             video_path = m['video_path']
             start = m['start']
             pt_path = m['pt_path']
@@ -63,4 +63,5 @@ class Restore:
             np.save(video_out_path, synced_video_frames)
             self.ai_avatar_record_col.update_one({'_id': task_id}, {
                 '$set': {f'video_out_put.{start}': video_out_path, 'num_parts': m['num_parts']}})
+            os.remove(pt_path)
             logger.info(m)
