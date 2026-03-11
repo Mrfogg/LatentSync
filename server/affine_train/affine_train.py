@@ -33,7 +33,12 @@ class AffineTrainMaster:
                 continue
             lists = task_data.get("data", {}).get("lists", [])
             for image in lists[::-1]:
-                mongo_image = self.affine_train_col.find_one({'_id': image.get('sn')})
+                # mongo_image = self.affine_train_col.find_one({'_id': image.get('sn')})
+                res = requests.post(RECIEVE_IMAGE_URL,
+                                    data={'id': image.get('id'), 'errcode': 0, 'status': 1,
+                                          'mode_id': 24})  # model_id没用，只是符合服务校验格式
+                logger.info(f"affine_transform success: {image}, {res.json()}")
+                continue
                 if not mongo_image:
                     video_path = download_file(image.get('fileUrl'), TEMPPLATE_VIDEO_PATH)
                     self.affine_col.delete_one({'_id': video_path})

@@ -133,11 +133,13 @@ if __name__ == '__main__':
                 break
             if task_data.get("data", {}).get("count", 0) == 0:
                 time.sleep(2)
+
                 continue
             lists = task_data.get("data", {}).get("lists", [])
             for task in lists[::-1]:
                 if task.get('mode') != '专业模式':
                     continue
+                print(task)
                 task['_id'] = task.get('task_id')
                 if ai_avatar_record_col.find_one({'_id': task['_id']}) is not None:
                     task_mongo = ai_avatar_record_col.find_one({'_id': task['_id']})
